@@ -24,6 +24,9 @@ We represent a 2D inextensible centerline by a **low-dimensional curvature model
 - wall crossings `y(s) < 0` (soft penalty + optional “crash” termination)
 - excessive bending (bending-energy penalty)
 
+**RL interpretation (state / action / episode).** We treat “designing a good cilium shape” as a small reinforcement-learning environment. A **state** is a discrete coefficient vector `c = [c0,c1,c2]` (each integer in `[-4,4]`) that parameterizes the curvature of a centerline via a Chebyshev basis. An **action** is a local edit: increase or decrease exactly one coefficient by 1 (6 actions total). An **episode** starts from the straight shape `c = (0,0,0)` and applies a fixed number of edits `H`; at the end of the episode we evaluate the **final** curve and reward large side-to-side sweep (`span = max(x) - min(x)`) while penalizing bending and any wall violation (`y < 0`). After training, we run a **greedy rollout** (no exploration) by repeatedly taking the action with the largest learned Q-value to produce the final designed shape.
+
+
 **Objective (main term):**
 - `span = max_s x(s) - min_s x(s)` (lateral sweep of the centerline)
 
