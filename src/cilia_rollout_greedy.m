@@ -21,7 +21,7 @@ function [trajC, trajR, finalOut, finalInfo] = cilia_rollout_greedy(Q, c0, H, cm
         if done, break; end
     end
 
-    finalOut = coeffs_to_curve_cheb(c, L, Npts, 0, [0;0]);
+    finalOut = coeffs_to_curve_cheb(c, L, Npts, params.theta0, [0;0]);
     [~, finalInfo] = cilia_reward_forward(finalOut, params);
 
     % Trim unused tail if ended early

@@ -41,7 +41,7 @@ alphaMin = 0.05;
 gamma    = 1.0;                % terminal-only reward
 
 eps0   = 0.50;
-epsMin = 0.01;
+epsMin = 0.05;
 
 alpha_decay = 0.995;           % keep as-is
 eps_decay   = 0.999;           % SLOWER exploration decay (important for sparse terminal reward)
@@ -52,11 +52,7 @@ params.wb = 0.05;              % bending penalty weight
 params.ww = 1.0;               % wall penalty weight multiplier
 params.mu_wall = 800.0;        % INCREASED wall penalty strength (was 200)
 params.theta0 = theta0;        % clamped angle at wall y=0
-params.step_cost = 0.01;       % try 0.01 or 0.02 cost to eliminate coeff bouncing
-
-params.terminate_minY = -1e-6;   % effectively y>=0
-params.crash_penalty  = -100;
-
+params.step_cost = 0.01;       % try 0.01 or 0.02 cost f
 
 
 %% ---- Initialize Q-table ----
@@ -101,8 +97,6 @@ for ep = 1:N_EPISODES
         else
             td_target = r + gamma * max(Q(s2,:));
         end
-
-
         Q(s,a) = Q(s,a) + alpha * (td_target - Q(s,a));
 
         s = s2;
@@ -117,20 +111,16 @@ for ep = 1:N_EPISODES
     outFinal = coeffs_to_curve_cheb(c, L, Npts, params.theta0, [0;0]);
     [rFinal, infoFinal] = cilia_reward_forward(outFinal, params);
 
-    % Track best FEASIBLE by span (main objective)
-    if infoFinal.minY >= params.terminate_minY
-        if infoFinal.span > bestSpan
-            bestSpan = infoFinal.span;
-            bestC_bySpan = c;
-        end
+    % Track best by span (main objective)
+    if infoFinal.span > bestSpan
+        bestSpan = infoFinal.span;
+        bestC_bySpan = c;
     end
 
-    % (Optional) track best FEASIBLE by one-step reward
-    if infoFinal.minY >= 1e-6
-        if rFinal > bestR
-            bestR = rFinal;
-            bestC_byR = c;
-        end
+    % (Optional) also track best by one-step reward
+    if rFinal > bestR
+        bestR = rFinal;
+        bestC_byR = c;
     end
 
     ep_return(ep) = G;

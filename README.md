@@ -19,10 +19,17 @@ We represent a 2D inextensible centerline by a **low-dimensional curvature model
 
 ### Task A (current)
 
-**Maximize forward reach** (tip (x(L))) while discouraging:
+**Maximize side-to-side sweep** of the filament while discouraging:
 
-* wall crossings (y(s) < 0) (soft penalty + optional “crash” termination)
-* excessive bending (bending-energy penalty)
+- wall crossings `y(s) < 0` (soft penalty + optional “crash” termination)
+- excessive bending (bending-energy penalty)
+
+**Objective (main term):**
+- `span = max_s x(s) - min_s x(s)` (lateral sweep of the centerline)
+
+Notes:
+- The base is clamped (fixed position and orientation). In the demos we typically set `theta0 = pi/2` so the filament starts pointing upward.
+
 
 ---
 

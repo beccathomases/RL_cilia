@@ -5,12 +5,13 @@ addpath(fullfile(fileparts(mfilename('fullpath')),'..','src'));
 
 L = 1.0;
 Npts = 500;
+params.theta0=pi/2;
 
 % Coeffs correspond to Chebyshev modes T0..T_{N-1} in the series
 % inside kappa(s) = (1-xi)*sum c_n T_n(xi).
-c = [ 4.0; -2.0; 0.5; 0.0; 0.0 ];  % N=5 is often plenty
+c = [ 1.0; .5; 0.5; 0.0; 0.0 ];  % N=5 is often plenty
 
-out = coeffs_to_curve_cheb(c, L, Npts, 0, [0;0]);
+out = coeffs_to_curve_cheb(c, L, Npts, params.theta0, [0;0]);
 mu = 100;  % tune
 [Pwall, violated] = y_nonneg_penalty(out.s, out.y, mu, 0);
 

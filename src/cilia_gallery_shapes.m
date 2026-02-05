@@ -33,12 +33,12 @@ function cilia_gallery_shapes(cmin, cmax, fixed_c2, L, Npts, params, valsToShow)
             c2 = fixed_c2;
 
             c = [c0; c1; c2];
-            out = coeffs_to_curve_cheb(c, L, Npts, 0, [0;0]);
+            out = coeffs_to_curve_cheb(c, L, Npts,params.theta0, [0;0]);
 
             % Compute quick diagnostics (optional)
             [~, info] = cilia_reward_forward(out, params);
 
-            ax = subplot(n, n, (i1-1)*n + i0); %#ok<LAXES>
+            ax = subplot(n, n, (i1-1)*n + i0); 
             plot(out.x, out.y, 'LineWidth', 1); hold on;
             yline(0, ':');
             plot(out.x(1), out.y(1), 'ko', 'MarkerFaceColor','k', 'MarkerSize', 3);
@@ -50,9 +50,9 @@ function cilia_gallery_shapes(cmin, cmax, fixed_c2, L, Npts, params, valsToShow)
             grid on;
             set(ax, 'XTick', [], 'YTick', []);
 
-            % Panel title: (c0,c1) and minY/xL (tiny)
-            title(sprintf('c0=%d,c1=%d\nxL=%.2f, minY=%.2f', ...
-                c0, c1, info.xL, info.minY), 'FontSize', 7);
+            % Panel title: (c0,c1) and minY/span 
+            title(sprintf('c0=%d,c1=%d\nspan=%.2f, minY=%.2f', ...
+                c0, c1, info.span, info.minY), 'FontSize', 7);
 
             hold off;
         end
