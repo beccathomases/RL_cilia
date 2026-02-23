@@ -1,3 +1,4 @@
+
 function [s2, r, done, c] = cilia_step(s, a, c, cmin, cmax, L, Npts, params, t, H)
 %CILIA_STEP Apply action a to coefficient vector c and compute reward.
 % Terminal-reward design version WITH hard wall feasibility:
@@ -18,7 +19,7 @@ function [s2, r, done, c] = cilia_step(s, a, c, cmin, cmax, L, Npts, params, t, 
     if mod(a,2) == 0
         sgn = -1;
     end
-
+    
     % Apply update + clip
     c(idx) = c(idx) + sgn;
     c(idx) = min(max(c(idx), cmin), cmax);
@@ -28,12 +29,12 @@ function [s2, r, done, c] = cilia_step(s, a, c, cmin, cmax, L, Npts, params, t, 
     [rFull, info] = cilia_reward_forward(out, params);
 
     % ---- Hard wall feasibility (terminate on violation) ----
-    if info.minY < params.terminate_minY
-        done = true;
-        r = params.crash_penalty;
-        s2 = cilia_state_index(c, cmin, cmax);
-        return;
-    end
+  %  if info.minY < params.terminate_minY
+  %      done = true;
+  %      r = params.crash_penalty;
+  %      s2 = cilia_state_index(c, cmin, cmax);
+  %      return;
+  %  end
 
     % Episode ends after H steps
     done = (t >= H);

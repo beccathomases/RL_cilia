@@ -80,6 +80,7 @@ for ep = 1:N_EPISODES
     eps   = max(epsMin,   eps0   * (eps_decay)^(ep-1));
 
     c = [0;0;0];  % start each episode at straight filament
+    %c = randi([-4,4],3,1);
     s = cilia_state_index(c, cmin, cmax);
 
     G = 0;

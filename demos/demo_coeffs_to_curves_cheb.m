@@ -9,7 +9,7 @@ params.theta0=pi/2;
 
 % Coeffs correspond to Chebyshev modes T0..T_{N-1} in the series
 % inside kappa(s) = (1-xi)*sum c_n T_n(xi).
-c = [ 1.0; .5; 0.5; 0.0; 0.0 ];  % N=5 is often plenty
+c = [ 1.0; .5; 0.5; 1.0; 1.0 ; 2; 4; -1; 1];  % N=5 is often plenty
 
 out = coeffs_to_curve_cheb(c, L, Npts, params.theta0, [0;0]);
 mu = 100;  % tune
