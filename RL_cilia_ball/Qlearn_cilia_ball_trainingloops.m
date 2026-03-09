@@ -1,5 +1,5 @@
 % 03/09/26 -
-%  Updated Qlearning code to incorporate extracting a cycle
+%  Updated Qlearning code to vary training rates
 %  and saving the data from each random seed trial
 
 P = setdefaultparams_ciliaball;
