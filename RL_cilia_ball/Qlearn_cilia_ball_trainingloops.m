@@ -11,21 +11,25 @@ maxSteps = 100; % fixed for these experiments
 
 % Tanya to vary nEpisodes
 nEpisodes = 10000; % change to 5000, 25000, 50000 
+% default 10000;
 
 % Kyla to vary alpha0
 alpha0 = .99; % Initial value for how quickly do i update my table
+% default 0.99;
 % change to 0.75, 0.5, 0.2 
 % will decay like alpha0*(.999)^(episodes-1) with a floor of 0.05
 alphafloor = 0.05;  % do not change
 
 % Charlotte to vary epsilon0
 epsilon0 = 0.5; % initial exploration vs exploitation with a floor of 0.1
+% default 0.5;
 % change to 1, 0.2 and 0.1 
 % will decay like alpha0*(.999)^(episodes-1)
 epsilonfloor = 0.1; % do not change
 
 % Lily to vary gamma
 gamma = .99;  % change to 0.999, 0.98, 0.97
+% default .99;
 
 for seeds = 1:10
     % Set the random seed for reproducibility
