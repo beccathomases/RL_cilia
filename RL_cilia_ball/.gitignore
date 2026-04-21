@@ -1,0 +1,17 @@
+*.mat
+*.fig
+*.mp4
+*.avi
+*.log
+*.out
+*.err
+*.asv
+.DS_Store
+
+checkpoints/
+snapshots/
+movies/
+figures/
+plots/
+results/
+logs/
