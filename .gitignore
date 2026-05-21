@@ -1,0 +1,67 @@
+# macOS / system
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# MATLAB autosaves / temporary files
+*.asv
+*.m~
+*.mex*
+*.slxc
+*.mlappinstall
+*.mlx.bak
+
+# MATLAB output/data files — add exceptions below if some .mat files are source data
+*.mat
+
+# Figures and generated images
+*.fig
+*.png
+*.jpg
+*.jpeg
+*.tif
+*.tiff
+*.svg
+*.pdf
+
+# Videos / animations
+*.mp4
+*.mov
+*.avi
+*.m4v
+*.gif
+
+# Logs and text outputs
+*.log
+*.out
+*.err
+
+# Python/cache stuff, if any
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Common generated-output folders
+results/
+Results/
+output/
+outputs/
+figures/
+Figures/
+movies/
+Movies/
+videos/
+Videos/
+animations/
+Animations/
+runs/
+Runs/
+data/generated/
+data/processed/
+
+# RL training/checkpoint-ish folders
+checkpoints/
+saved_runs/
+trained_agents/
+policies/
+q_tables/
