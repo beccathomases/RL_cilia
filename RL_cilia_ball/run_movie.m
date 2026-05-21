@@ -1,134 +1,206 @@
-% This code will load a saved cycle and make a movie of that cycle.
-% Change the parameters below to load the file you want to look at.
+% 04/20/26
+% Pretrain tiny NN from a saved tabular Q-table.
+%
+% targetMode options:
+%   'centeredQ' : target is centered/scaled Q(s,:)
+%   'policy'    : target is a preference vector with +1 on best action, -1 elsewhere
+%
+% Recommended:
+%   start with targetMode = 'centeredQ'
+%   use a strong/better tabular teacher if possible
 
-nreps = 10;        % How many times to repeat the cycle in your movie
-pausetime = 0.1;   % How long to pause between frames when displaying
+clear; clc; close all;
 
-saveMovie = true;  % true = save a movie file, false = just display
-fps = 10;          % frames per second for saved movie
+% ====================
+% choose tabular file
+% ====================
 
-nEpisodes = 10000; 
-alpha0 = .99; 
-epsilon0 = 0.5; 
-gamma = .99;  
-seeds = 3;
+nEpisodes_tab = 1000;   % use your longer/better tabular run here
+alpha0_tab    = 0.99;
+epsilon0_tab  = 0.75;
+gamma_tab     = 0.99;
+seed_tab      = 1;
 
-fin = sprintf('cycle4_run_%d_g%1.2f_eps0%1.2f_alp0%1.2f_nEpisode%d.mat', ...
-    seeds, gamma, epsilon0, alpha0, nEpisodes);
+fin = sprintf('run_%d_g%1.2f_eps0%1.2f_alp0%1.2f_nEpisode%d.mat', ...
+    seed_tab, gamma_tab, epsilon0_tab, alpha0_tab, nEpisodes_tab);
 
-fout = sprintf('cycle4_run_%d_g%1.2f_eps0%1.2f_alp0%1.2f_nEpisode%d.mp4', ...
-    seeds, gamma, epsilon0, alpha0, nEpisodes);
+S = load(fin);
 
-load(fin)
+if ~isfield(S,'Q')
+    error('Loaded file does not contain Q.');
+end
+
+Qtab = S.Q;
+
+% ====================
+% environment
+% ====================
+
 P = setdefaultparams_ciliaball;
-env = ciliaBallTabularEnv(P, struct('reset_mode','fixed','precompute',false));
+env = ciliaBallTabularEnv(P, struct('reset_mode','fixed','precompute',true));
 
-playCycleMovie(env, cycle_states, nreps, pausetime, saveMovie, fout, fps)
+nS = env.nStates;
+nA = env.nActions;
 
+if ~isequal(size(Qtab), [nS, nA])
+    error('Size of Q does not match env.nStates x env.nActions.');
+end
 
+% ====================
+% NN architecture
+% ====================
 
-% ================= helper function below =================
-function playCycleMovie(env, cycle_states, nCyclesToShow, pauseTime, saveMovie, movieFile, fps)
-% playCycleMovie  Animate a detected cycle for the cilia-ball model.
-%
-% Inputs:
-%   env            environment struct from ciliaBallTabularEnv
-%   cycle_states   vector of state indices in cycle order
-%                  (can include repeated closing state at end)
-%   nCyclesToShow  number of times to repeat the cycle
-%   pauseTime      pause between frames when displaying
-%   saveMovie      true/false, whether to save a video
-%   movieFile      output filename, e.g. 'mymovie.mp4'
-%   fps            frames per second for saved video
-%
-% Note:
-%   This uses VideoWriter(...,'MPEG-4') to make an mp4.
-%   If your MATLAB installation does not support MPEG-4, MATLAB will give
-%   an error when it tries to create the video writer. In that case,
-%   change the line
-%       v = VideoWriter(movieFile, 'MPEG-4');
-%   to something like
-%       v = VideoWriter('cycle_movie.avi', 'Motion JPEG AVI');
-%   and save an .avi file instead.
+m = 32;      % try 16 or 32
+d = 4;       % [phi1; phi2; dphi1; dphi2]
+rng(1);
 
-    if nargin < 3 || isempty(nCyclesToShow)
-        nCyclesToShow = 10;
+net.W1 = 0.1 * randn(m, d);
+net.b1 = zeros(m, 1);
+net.W2 = 0.1 * randn(nA, m);
+net.b2 = zeros(nA, 1);
+
+% ====================
+% dataset options
+% ====================
+
+targetMode = 'centeredQ';   % 'centeredQ' or 'policy'
+
+X = zeros(d, nS);
+Y = zeros(nA, nS);
+
+for s = 1:nS
+    X(:,s) = state_to_x_dphi_zero(env, s);
+
+    q = Qtab(s,:)';
+
+    switch lower(targetMode)
+        case 'centeredq'
+            q = q - mean(q);                    % remove offset
+            q = q / (max(abs(q)) + 1e-8);      % scale to about [-1,1]
+            Y(:,s) = q;
+
+        case 'policy'
+            [~, a_star] = max(q);
+            y = -ones(nA,1);
+            y(a_star) = 1;
+            Y(:,s) = y;
+
+        otherwise
+            error('Unknown targetMode.');
     end
-    if nargin < 4 || isempty(pauseTime)
-        pauseTime = 0.1;
-    end
-    if nargin < 5 || isempty(saveMovie)
-        saveMovie = false;
-    end
-    if nargin < 6 || isempty(movieFile)
-        movieFile = 'cycle_movie.mp4';
-    end
-    if nargin < 7 || isempty(fps)
-        fps = 10;
-    end
+end
 
-    % If the cycle is stored like [... s0] with the first state repeated
-    % at the end, remove that last repeated state for animation.
-    if numel(cycle_states) >= 2 && cycle_states(1) == cycle_states(end)
-        cycle_core = cycle_states(1:end-1);
-    else
-        cycle_core = cycle_states;
-    end
+% ====================
+% supervised pretraining
+% ====================
 
-    if isempty(cycle_core)
-        error('cycle_states is empty.');
-    end
+nEpochs = 8000;      % try 4000 or 8000
+eta     = 0.01;
+lossHist = zeros(nEpochs,1);
 
-    nPhase = length(cycle_core);
+for ep = 1:nEpochs
+    dW1 = zeros(size(net.W1));
+    db1 = zeros(size(net.b1));
+    dW2 = zeros(size(net.W2));
+    db2 = zeros(size(net.b2));
 
-    if saveMovie
-        v = VideoWriter(movieFile, 'MPEG-4');
-        v.FrameRate = fps;
-        open(v);
-    end
+    totalLoss = 0;
 
-    figure;
-    for k = 1:nCyclesToShow
-        for j = 1:nPhase
-            s = cycle_core(j);
+    for i = 1:nS
+        x = X(:,i);
+        y = Y(:,i);
 
-            % Convert state -> subscripts -> hinge angles
-            sub = env.state2sub(s);
-            phi = env.sub2phi(sub);
+        [qhat, h] = nn_forward(net, x);
 
-            % Compute positions
-            X  = position_from_angle(phi, env.P);
-            XX = [env.P.X0; X];
+        e = qhat - y;
+        totalLoss = totalLoss + 0.5 * sum(e.^2);
 
-            % Draw
-            clf;
-            plot(XX(:,1), XX(:,3), 'k-', 'LineWidth', 3); hold on;
-            plot(X(:,1),  X(:,3),  'r.', 'MarkerSize', 30);
-            plot([-1 1], [0 0], 'k', 'LineWidth', 5);
+        delta2 = e;   % linear output
+        delta1 = (net.W2' * delta2) .* h .* (1 - h);
 
-            xlim([-1 1]);
-            ylim([-0.25 1.5]);
-            axis equal;
-            grid on;
+        dW2 = dW2 + delta2 * h';
+        db2 = db2 + delta2;
 
-            title(sprintf('Phase %02d/%02d,  Period %02d/%02d', ...
-                j, nPhase, k, nCyclesToShow));
-
-            drawnow;
-
-            if saveMovie
-                frame = getframe(gcf);
-                writeVideo(v, frame);
-            end
-
-            if pauseTime > 0
-                pause(pauseTime);
-            end
-        end
+        dW1 = dW1 + delta1 * x';
+        db1 = db1 + delta1;
     end
 
-    if saveMovie
-        close(v);
-        fprintf('Saved movie to %s\n', movieFile);
+    dW2 = dW2 / nS;
+    db2 = db2 / nS;
+    dW1 = dW1 / nS;
+    db1 = db1 / nS;
+
+    net.W2 = net.W2 - eta * dW2;
+    net.b2 = net.b2 - eta * db2;
+    net.W1 = net.W1 - eta * dW1;
+    net.b1 = net.b1 - eta * db1;
+
+    lossHist(ep) = totalLoss / nS;
+
+    if mod(ep,200) == 0
+        fprintf('Epoch %d / %d, loss = %.6e\n', ep, nEpochs, lossHist(ep));
     end
+end
+
+% ====================
+% diagnostics
+% ====================
+
+Yhat = zeros(nA, nS);
+for s = 1:nS
+    Yhat(:,s) = nn_forward(net, X(:,s));
+end
+
+if strcmpi(targetMode,'centeredQ')
+    relErr = norm(Yhat - Y, 'fro') / max(norm(Y, 'fro'), 1e-12);
+    fprintf('Relative Frobenius fit error = %.6e\n', relErr);
+else
+    relErr = NaN;
+end
+
+[~, a_tab] = max(Qtab, [], 2);
+[~, a_nn]  = max(Yhat, [], 1);
+policyMatch = mean(a_tab(:)' == a_nn);
+fprintf('Greedy policy agreement = %.2f%%\n', 100 * policyMatch);
+
+figure;
+plot(lossHist, 'LineWidth', 1.5);
+xlabel('epoch');
+ylabel('supervised loss');
+title(sprintf('Tabular-to-NN pretraining loss (%s)', targetMode));
+grid on;
+
+% ====================
+% save pretrained network
+% ====================
+
+fout = sprintf(['pretrained_%s_from_tabular_seed%d_g%1.2f_eps0%1.2f_' ...
+                'alp0%1.2f_nEpisode%d_m%d.mat'], ...
+                targetMode, seed_tab, gamma_tab, epsilon0_tab, ...
+                alpha0_tab, nEpisodes_tab, m);
+
+save(fout, 'net', 'lossHist', 'relErr', 'policyMatch', 'targetMode', ...
+     'seed_tab', 'gamma_tab', 'epsilon0_tab', 'alpha0_tab', ...
+     'nEpisodes_tab', 'm');
+
+fprintf('Saved pretrained net to %s\n', fout);
+
+
+% ====================
+% helper functions
+% ====================
+
+function x = state_to_x_dphi_zero(env, s)
+% Input for dphi-network pretraining:
+% x = [phi1; phi2; 0; 0]
+    sub = env.state2sub(s);
+    phi = env.sub2phi(sub);
+    phi_norm = phi(:) ./ env.P.phimax(:);
+    x = [phi_norm; 0; 0];
+end
+
+function [q, h] = nn_forward(net, x)
+    z1 = net.W1 * x + net.b1;
+    h  = 1 ./ (1 + exp(-z1));
+    q  = net.W2 * h + net.b2;
 end

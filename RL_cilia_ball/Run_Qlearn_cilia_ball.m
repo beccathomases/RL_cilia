@@ -3,8 +3,8 @@ P = setdefaultparams_ciliaball;
 % Precompute is nice for speed once physics is "frozen"
 env = ciliaBallTabularEnv(P, struct('reset_mode','fixed','precompute',true));
 
-nEpisodes = 200;
-maxSteps = 40;
+nEpisodes = 1000;
+maxSteps = 100;
 alpha = .2;
 gamma = .95;
 epsilon = 0.2;
@@ -13,9 +13,11 @@ epsilon = 0.2;
 
 % visualize a greedy rollout
 s = env.reset();
-for t = 1:30
+for t = 1:100
   env.render(s);
+  pause(.1)
   [~, a] = max(Q(s,:));
   [s, r] = env.step(s, a);
   fprintf('t=%d, r=%g\n', t, r);
 end
+

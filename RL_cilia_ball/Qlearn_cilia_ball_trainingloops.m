@@ -7,10 +7,10 @@ P = setdefaultparams_ciliaball;
 % here
 env = ciliaBallTabularEnv(P, struct('reset_mode','fixed','precompute',true));
 
-maxSteps = 100; % fixed for these experiments
+maxSteps = 2000; % fixed for these experiments
 
 % Tanya to vary nEpisodes
-nEpisodes = 10000; % change to 5000, 25000, 50000 
+nEpisodes = 1000; % change to 5000, 25000, 50000 
 % default 10000;
 
 % Kyla to vary alpha0
@@ -21,7 +21,7 @@ alpha0 = .99; % Initial value for how quickly do i update my table
 alphafloor = 0.05;  % do not change
 
 % Charlotte to vary epsilon0
-epsilon0 = 0.5; % initial exploration vs exploitation with a floor of 0.1
+epsilon0 = 0.75; % initial exploration vs exploitation with a floor of 0.1
 % default 0.5;
 % change to 1, 0.2 and 0.1 
 % will decay like alpha0*(.999)^(episodes-1)
@@ -62,8 +62,7 @@ for seeds = 1:10
         epReturn(ep) = G;
     end
     % Store the return for each seed trial
-    fname = sprintf('run_%d_g%1.2f_eps0%1.2f_alp0%1.2f_nEpisode%d.mat',seeds,gamma,epsilon0,alpha0,nEpisodes);
+    fname = sprintf('run_%d_g%1.2f_eps0%1.2f_alp0%1.2f_nEpisode%d_maxSteps%d.mat',seeds,gamma,epsilon0,alpha0,nEpisodes,maxSteps);
     save(fname,'Q','epReturn','gamma','epsilon0','alpha0','nEpisodes','maxSteps','seeds');
     
-
 end
