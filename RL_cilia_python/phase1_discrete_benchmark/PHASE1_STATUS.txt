@@ -1,0 +1,8 @@
+Phase I discrete benchmark frozen: 2026-05-22
+
+Canonical result:
+- VI/tabular Q/PPO -> same length-24 cycle
+- DQN -> reproducible nearby length-25 cycle
+
+This folder should remain unchanged except for clearly documented bugfixes.
+Exploratory work should go elsewhere.

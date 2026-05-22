@@ -1,130 +1,98 @@
-# RL cilia Python benchmark
+# RL_cilia_python
 
-Current working directory for the discrete 2-ball cilia reinforcement-learning benchmark:
+Top-level working directory for the Python side of the RL cilia project.
 
-`/Users/bthomases/Documents/Student_Projects/RL_cilia/RL_cilia_python`
+## Directory role
 
-## Main purpose
+This directory is now organized as a project hub rather than a single benchmark folder. In particular, it contains:
 
-This folder contains the current Python implementation of the small discrete 2-ball cilia control problem, used as a benchmark for comparing:
+- a **frozen Phase I discrete benchmark snapshot**
+- older exploratory and historical material
+- a place for future Phase II development
 
-- value iteration
-- tabular Q-learning
-- PPO
-- DQN
+The main canonical benchmark for the small discrete 2-ball problem is no longer the top level of this directory. It now lives in:
 
-This is the canonical working location for the Python transition of the RL cilia project.
+- `phase1_discrete_benchmark/`
 
-## Canonical current files
+## Current directory structure
 
-### Environment
-- `cilia_2_ball_env.py`  
-  Current canonical Python environment, using the cumulative-angle (relative-angle) representation.
+### `phase1_discrete_benchmark/`
+Frozen Phase I benchmark snapshot for the small discrete 2-ball cilia-control problem.
 
-- `cilia_2_ball_env_notcummang.py`  
-  Older/non-cumulative-angle environment kept for comparison only.
+This folder contains:
+- the canonical cumulative-angle Python environment
+- benchmark scripts for value iteration, tabular Q-learning, PPO, and DQN
+- analysis scripts for method comparison and the gamma sweep
+- saved benchmark results and models
+- benchmark figures
+- the current Phase I notes/writeup
 
-### Main solvers
-- `value_iteration_cilia_2_ball.py`  
-  Value-iteration solver for the fixed discrete benchmark.
+This is the main place to look for the locked benchmark state.
 
-- `tabular_q_cilia_2_ball.py`  
-  Tabular Q-learning code for the same benchmark.
+### `phase2_exploration/`
+Working area for future development beyond the frozen Phase I benchmark.
 
-- `cilia_2_ball_ppo.py`  
-  PPO training script.
+Intended uses include:
+- new environments
+- reward-design experiments
+- larger cilia models
+- additional RL methods
+- refactoring and cleaner package structure
 
-- `cilia_2_ball_deepQ.py`  
-  DQN / DeepQ training script.
+### `exploratory_old/`
+Older exploratory, noncanonical, or superseded material retained for reference.
 
-### Diagnostics / comparisons
-- `plot_phase_plane.py`
-- `plot_tabular_q_seed.py`
-- `movie_best_VI_cycle.py`
-- `evaluate_ppo_cilia_2_ball.py`
-- `evaluate_dqn_cilia_2_ball.py`
-- `compare_all_methods_cilia_2_ball.py`
-- `compare_matlab_python.py`
-- `compare_discounted_cycle_values.py`
-- `compare_dqn_policy_to_VI.py`
+This includes:
+- historical archives
+- reproducibility checks
+- older sweeps
+- scratch scripts
+- alternative environment variants
 
-## Canonical saved outputs
+These files are not part of the frozen benchmark and should not be treated as canonical results.
 
-### Value iteration
-- `value_iteration_cilia_2_ball_clip_penalty_bins11x21_g0.990.npy`  
-  Current canonical VI result for the clip-penalty benchmark.
+### `old_top_level_copies/`
+Copies of scripts and files that used to live at the top level before the Phase I benchmark was frozen into its own folder.
 
-- `value_iteration_cilia_2_ball_stay_penalty_bins11x21_g0.990.npy`  
-  VI result for the stay-penalty variant.
+This folder is mainly for transition/backup purposes and is not intended as the main working location.
 
-### Tabular Q
-- `tabular_q_cilia_2_ball_clip_penalty_bins11x21_ep1000_steps500_g0.990_eps0.75_a0.99.npy`  
-  Canonical tabular-Q result for the clip-penalty benchmark.
+### `figures/`
+Top-level figure staging area, if used. The canonical benchmark figures are stored inside `phase1_discrete_benchmark/figures/`.
 
-- `tabular_q_cilia_2_ball_stay_penalty_bins11x21_ep1000_steps500_g0.990_eps0.75_a0.99.npy`  
-  Tabular-Q result for the stay-penalty variant.
+## Recommended workflow
 
-### PPO
-- `ppo_model.zip`  
-  Saved PPO model.
+### For the frozen benchmark
+Use:
+- `phase1_discrete_benchmark/`
 
-### DQN
-- `dqn_cilia_2_ball.pt`  
-  Saved DQN network weights.
+This is the correct location for:
+- rerunning the benchmark
+- reproducing the Phase I figures
+- checking the benchmark notes/writeup
 
-- `dqn_cilia_2_ball_results.npy`  
-  Saved DQN diagnostics and cycle information.
+### For new experiments
+Use:
+- `phase2_exploration/`
 
-## Current benchmark status
+This is the preferred place for new work so that the frozen benchmark remains unchanged.
 
-For the current cumulative-angle Python environment with clip-penalty boundary handling:
+### For historical reference
+Look in:
+- `exploratory_old/`
+- `old_top_level_copies/`
 
-- value iteration converges to a unique length-24 discounted-optimal cycle
-- tabular Q-learning recovers the same cycle (up to cyclic phase shift)
-- PPO also recovers the same cycle
-- DQN finds a nearby but suboptimal longer cycle
-- the Python cycle agrees with the validated MATLAB cycle up to cyclic phase shift
+## Benchmark summary
 
-## Quick rerun guide
+For the current frozen Phase I benchmark in `phase1_discrete_benchmark/`:
 
-### Recompute value iteration
-```bash
-python value_iteration_cilia_2_ball.py
-````
-
-### Recompute tabular Q-learning
-
-```bash
-python tabular_q_cilia_2_ball.py
-```
-
-### Train PPO
-
-```bash
-python cilia_2_ball_ppo.py
-```
-
-### Train DQN
-
-```bash
-python cilia_2_ball_deepQ.py
-```
-
-### Compare all methods
-
-```bash
-python compare_all_methods_cilia_2_ball.py
-```
-
-### Compare DQN policy to VI value function
-
-```bash
-python compare_dqn_policy_to_VI.py
-```
+- value iteration finds a unique length-24 discounted-optimal cycle
+- tabular Q-learning recovers the same cycle up to cyclic phase shift
+- PPO recovers the same cycle up to cyclic phase shift
+- DQN is reproducible under corrected seeding and converges to a nearby length-25 suboptimal cycle
+- the Python VI cycle agrees with the previously validated MATLAB cycle up to cyclic phase shift
 
 ## Notes
 
-* The current canonical environment is `cilia_2_ball_env.py`.
-* Older iteration counts or older saved files may correspond to earlier versions of the environment or reward scaling.
-* If results look inconsistent, rerun value iteration first and treat that output as the canonical current benchmark.
-
+- Treat `phase1_discrete_benchmark/` as read-only except for carefully documented fixes.
+- Do new development outside the frozen benchmark.
+- The top-level directory is now mainly organizational.

@@ -1,0 +1,101 @@
+DQN reproducibility check
+========================================================================
+
+Compared files:
+  run1: /Users/bthomases/Documents/Student_Projects/RL_cilia/RL_cilia_python/dqn_cilia_2_ball_results_01.npy
+  run2: /Users/bthomases/Documents/Student_Projects/RL_cilia/RL_cilia_python/dqn_cilia_2_ball_results_02.npy
+  run3: /Users/bthomases/Documents/Student_Projects/RL_cilia/RL_cilia_python/dqn_cilia_2_ball_results_03.npy
+  run4: /Users/bthomases/Documents/Student_Projects/RL_cilia/RL_cilia_python/dqn_cilia_2_ball_results_04.npy
+
+All train settings identical: True
+All env settings identical:   True
+
+Best cycle summaries:
+
+run1:
+  length     = 25
+  avg reward = 0.3552670693642501
+  cycle      = [(0, 18), (1, 17), (2, 16), (3, 15), (4, 14), (5, 13), (6, 12), (7, 11), (8, 12), (9, 13), (10, 14), (10, 15), (10, 16), (10, 17), (10, 18), (10, 19), (9, 20), (8, 20), (7, 20), (6, 20), (5, 20), (4, 20), (3, 20), (2, 20), (1, 19)]
+
+run2:
+  length     = 25
+  avg reward = 0.3552670693642501
+  cycle      = [(0, 18), (1, 17), (2, 16), (3, 15), (4, 14), (5, 13), (6, 12), (7, 11), (8, 12), (9, 13), (10, 14), (10, 15), (10, 16), (10, 17), (10, 18), (10, 19), (9, 20), (8, 20), (7, 20), (6, 20), (5, 20), (4, 20), (3, 20), (2, 20), (1, 19)]
+
+run3:
+  length     = 25
+  avg reward = 0.3552670693642501
+  cycle      = [(0, 18), (1, 17), (2, 16), (3, 15), (4, 14), (5, 13), (6, 12), (7, 11), (8, 12), (9, 13), (10, 14), (10, 15), (10, 16), (10, 17), (10, 18), (10, 19), (9, 20), (8, 20), (7, 20), (6, 20), (5, 20), (4, 20), (3, 20), (2, 20), (1, 19)]
+
+run4:
+  length     = 25
+  avg reward = 0.3552670693642501
+  cycle      = [(0, 18), (1, 17), (2, 16), (3, 15), (4, 14), (5, 13), (6, 12), (7, 11), (8, 12), (9, 13), (10, 14), (10, 15), (10, 16), (10, 17), (10, 18), (10, 19), (9, 20), (8, 20), (7, 20), (6, 20), (5, 20), (4, 20), (3, 20), (2, 20), (1, 19)]
+
+========================================================================
+Pairwise summary:
+
+run1 vs run2:
+  cycle_match_up_to_shift = True
+  cycle_actions_equal     = True
+  policy_equal            = True
+  policy_n_diff           = 0
+  episode_rewards_equal   = True
+  episode_lengths_equal   = True
+  loss_history_equal      = True
+  q_means_equal           = True
+
+run1 vs run3:
+  cycle_match_up_to_shift = True
+  cycle_actions_equal     = True
+  policy_equal            = True
+  policy_n_diff           = 0
+  episode_rewards_equal   = True
+  episode_lengths_equal   = True
+  loss_history_equal      = True
+  q_means_equal           = True
+
+run1 vs run4:
+  cycle_match_up_to_shift = True
+  cycle_actions_equal     = True
+  policy_equal            = True
+  policy_n_diff           = 0
+  episode_rewards_equal   = True
+  episode_lengths_equal   = True
+  loss_history_equal      = True
+  q_means_equal           = True
+
+run2 vs run3:
+  cycle_match_up_to_shift = True
+  cycle_actions_equal     = True
+  policy_equal            = True
+  policy_n_diff           = 0
+  episode_rewards_equal   = True
+  episode_lengths_equal   = True
+  loss_history_equal      = True
+  q_means_equal           = True
+
+run2 vs run4:
+  cycle_match_up_to_shift = True
+  cycle_actions_equal     = True
+  policy_equal            = True
+  policy_n_diff           = 0
+  episode_rewards_equal   = True
+  episode_lengths_equal   = True
+  loss_history_equal      = True
+  q_means_equal           = True
+
+run3 vs run4:
+  cycle_match_up_to_shift = True
+  cycle_actions_equal     = True
+  policy_equal            = True
+  policy_n_diff           = 0
+  episode_rewards_equal   = True
+  episode_lengths_equal   = True
+  loss_history_equal      = True
+  q_means_equal           = True
+
+========================================================================
+ALL POLICIES IDENTICAL: True
+ALL BEST CYCLES MATCH UP TO SHIFT: True
+ALL MAIN DIAGNOSTIC ARRAYS IDENTICAL: True
