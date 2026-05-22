@@ -205,6 +205,23 @@ def train_dqn(
     np.random.seed(seed)
     torch.manual_seed(seed)
 
+    # extra reproducibility
+    try:
+        torch.use_deterministic_algorithms(True)
+    except Exception:
+        pass
+
+    # seed env / gym RNGs too
+    env.reset(seed=seed)
+    try:
+        env.action_space.seed(seed)
+    except AttributeError:
+        pass
+    try:
+        env.observation_space.seed(seed)
+    except AttributeError:
+        pass
+
     q_net = QNet(input_dim=2, hidden=64, n_actions=env.action_space.n).to(device)
     target_net = QNet(input_dim=2, hidden=64, n_actions=env.action_space.n).to(device)
     update_target(q_net, target_net)
