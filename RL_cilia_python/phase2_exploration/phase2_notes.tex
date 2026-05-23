@@ -1,0 +1,194 @@
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb}
+\usepackage[margin=1in]{geometry}
+
+\title{Phase II Notes: RL Exploration on and Beyond the 2-Ball Benchmark}
+
+\begin{document}
+
+\maketitle
+
+\section{Very short Phase I summary}
+
+Phase I locked down the small discrete two-ball Python benchmark in a reproducible form. In that benchmark, value iteration gives a length-$24$ discounted-optimal cycle for $\gamma=0.99$, and tabular Q-learning and PPO recover the same cycle up to cyclic phase shift. DQN, after fixing the reproducibility issue, converges reproducibly but not to the same orbit: it finds a nearby length-$25$ alternative.
+
+So Phase I gave:
+\begin{itemize}
+    \item a clean canonical Python environment,
+    \item an exact benchmark through value iteration,
+    \item a comparison point for tabular and neural RL methods,
+    \item a reproducible set of benchmark figures and notes.
+\end{itemize}
+
+\section{What Phase II is really about}
+
+I do not want Phase II to be mainly about matching the discounted value-iteration solution. That was useful in Phase I because it gave an exact benchmark, but it is not the real long-term goal of the project.
+
+The real question is more like:
+\begin{quote}
+How can RL be used to discover good recurrent beating strokes in more complex cilia problems, especially once the value table and exact VI solution disappear?
+\end{quote}
+
+So the small two-ball problem is still useful, but now more as a controlled testbed for RL behavior than as an exact benchmark problem.
+
+\section{Main Phase II idea}
+
+Use the same small two-ball problem for a while longer, but shift the emphasis:
+\begin{itemize}
+    \item less emphasis on exact agreement with VI,
+    \item more emphasis on what kinds of recurrent cycles RL actually finds,
+    \item more attention to cycle quality, robustness, and training behavior,
+    \item use this as preparation for larger problems where VI/table methods are gone.
+\end{itemize}
+
+\section{Current DQN direction}
+
+The first Phase II thread is DQN exploration on the two-ball problem.
+
+Things I want to understand:
+\begin{itemize}
+    \item what families of cycles DQN finds,
+    \item how this depends on learning rate, training length, and seed,
+    \item whether longer training pushes DQN toward the VI cycle or toward longer/higher-average cycles,
+    \item how to interpret cycles that have higher average reward per period than the VI cycle,
+    \item whether DQN is really learning ``better strokes'' in the average-reward sense, even if they are not VI-optimal.
+\end{itemize}
+
+
+\subsection*{DQN tiny-grid results}
+
+I ran a small reproducible DQN grid on the two-ball benchmark, varying learning rate, training length, and seed. The goal here was not only to ask whether DQN reproduces the discounted VI cycle, but also to see what kinds of recurrent cycles it discovers when trained longer and under slightly different settings.
+
+The overall picture is variable rather than sharply monotone. There is no single hyperparameter setting that cleanly dominates all the others. Instead, the runs produce a family of nearby recurrent cycles with lengths ranging from roughly $22$ to $27$, together with a corresponding spread in average rewards. This suggests that DQN is exploring a structured local landscape of recurrent strokes rather than converging to one unique solution.
+
+\begin{table}[t]
+\centering
+\begin{tabular}{cccccc}
+\hline
+Rank & Learning rate & Episodes & Seed & Cycle length & Avg.\ reward \\
+\hline
+1 & $5\times 10^{-4}$ & $10000$ & $3$ & $26$ & $0.390969$ \\
+2 & $10^{-3}$         & $10000$ & $1$ & $25$ & $0.389592$ \\
+3 & $2\times 10^{-4}$ & $5000$  & $3$ & $24$ & $0.382692$ \\
+4 & $5\times 10^{-4}$ & $10000$ & $2$ & $25$ & $0.380452$ \\
+5 & $5\times 10^{-4}$ & $10000$ & $0$ & $23$ & $0.378555$ \\
+\hline
+\end{tabular}
+\caption{Top DQN runs from the tiny reproducible grid, ranked by average reward of the detected best recurrent cycle. The strongest run in this sweep used learning rate $5\times 10^{-4}$ and $10000$ training episodes. Several of the top runs produce longer cycles with larger average reward than the VI benchmark cycle.}
+\label{tab:dqn_tiny_grid_top_runs}
+\end{table}
+
+
+The exact VI cycle still appears in some DQN runs, showing that DQN can in fact reach the discounted-optimal benchmark cycle on this small problem. However, several of the strongest runs in the sweep produce nearby longer cycles with larger average reward per cycle than the VI benchmark. Table~\ref{tab:dqn_tiny_grid_top_runs} lists the top runs ranked by average reward.
+
+Among the tested settings, the $5\times 10^{-4}$, $10000$-episode group gave the strongest overall performance in the average-reward sense: it had both the largest group mean average reward and the best single run in the sweep. More broadly, increasing the training length from $5000$ to $10000$ episodes often improved the average reward, especially for learning rates $5\times 10^{-4}$ and $10^{-3}$.
+
+Overall, the main lesson of this sweep is not that one hyperparameter choice solves the problem cleanly, but rather that DQN on the two-ball benchmark appears to navigate a multi-solution landscape. Some runs recover the exact VI cycle, while others converge to nearby longer cycles with larger average reward per period. This makes the tiny-grid study useful not only as a tuning exercise, but also as evidence that the discounted VI benchmark and the average-reward stroke viewpoint can pull in different directions.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\textwidth]{dqn_tiny_grid_runs/figures/dqn_tiny_grid_top3_phase_plane.png}
+    \caption{Phase-plane plots for the top three DQN runs from the tiny reproducible grid, ranked by average reward of the detected best recurrent cycle. These plots help show whether the strongest DQN solutions are genuinely different recurrent motions or only slight variants of one another.}
+    \label{fig:dqn_top3_phase}
+\end{figure}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\textwidth]{dqn_tiny_grid_runs/figures/dqn_tiny_grid_top3_strokes.png}
+    \caption{Physical stroke reconstructions for the top three DQN runs. Comparing these stroke plots helps clarify how much geometric variation lies behind the differences in cycle length and average reward.}
+    \label{fig:dqn_top3_strokes}
+\end{figure}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.8\textwidth]{dqn_tiny_grid_runs/figures/dqn_tiny_grid_top3_reward_traces.png}
+    \caption{Reward traces along the top three DQN recurrent cycles. These provide a more detailed view of how high-average-reward cycles distribute positive and negative rewards along a full stroke.}
+    \label{fig:dqn_top3_rewards}
+\end{figure}
+
+\section{Current PPO direction}
+
+The second Phase II thread is PPO exploration on the same two-ball problem.
+
+PPO matters because it feels closer to the kind of method I might still want once the problem is too large for VI or tabular methods.
+
+Questions:
+\begin{itemize}
+    \item how robust is PPO across seeds?
+    \item does PPO always recover the VI/tabular cycle on this benchmark?
+    \item does PPO also admit nearby alternatives if trained differently or longer?
+    \item how does PPO compare to DQN as a way to search for good recurrent strokes?
+\end{itemize}
+
+\subsection*{Placeholder for PPO results}
+
+Put PPO seed sweep / training-length exploration here.
+
+\section{Discounted benchmark versus stroke objective}
+
+A key conceptual point for Phase II:
+
+The discounted VI problem is still useful, but I do not think it is the final scientific objective. It is a benchmark and a way to find and organize solutions. What I am really after is something more like:
+\begin{itemize}
+    \item average reward per stroke,
+    \item stroke efficiency,
+    \item quality of a full recurrent motion,
+    \item maybe eventually something more physically motivated than the current discounted table objective.
+\end{itemize}
+
+So I want to keep both viewpoints around:
+\begin{itemize}
+    \item VI as an exact benchmark,
+    \item cycle quality as the more relevant long-term target.
+\end{itemize}
+
+This is probably one of the main conceptual transitions from Phase I to Phase II.
+
+\section{Why stay with the 2-ball problem a bit longer?}
+
+Because it is still small enough to interpret, but already complicated enough to show interesting differences between RL methods and objectives.
+
+This makes it a good place to:
+\begin{itemize}
+    \item test reproducibility,
+    \item compare DQN and PPO,
+    \item think about discounted versus average-reward behavior,
+    \item identify what should scale and what probably will not.
+\end{itemize}
+
+\section{What comes after this}
+
+After enough DQN/PPO exploration on the two-ball problem, the next step should be to move to a larger or more flexible model.
+
+Possible directions:
+\begin{itemize}
+    \item 3-ball or 4-ball discrete cilium,
+    \item richer reward structures,
+    \item alternative boundary handling,
+    \item eventually continuous or low-mode cilia descriptions.
+\end{itemize}
+
+The point of the Phase II two-ball work is to help decide how to make that jump intelligently.
+
+\section{Immediate working to-do list}
+
+\begin{itemize}
+    \item finish reproducible DQN tiny-grid rerun,
+    \item summarize what DQN is doing at different learning rates and episode counts,
+    \item start a small PPO seed sweep,
+    \item think more clearly about how to score a full recurrent stroke,
+    \item decide what the first post-benchmark larger model should be.
+\end{itemize}
+
+\section{Open questions}
+
+\begin{itemize}
+    \item What is the right notion of ``best stroke'' for the real project?
+    \item Is average reward per cycle enough, or do I want something more physical?
+    \item When DQN finds higher-average cycles than VI, what is the cleanest way to interpret that?
+    \item Does PPO behave more robustly than DQN on this problem?
+    \item What lessons from the two-ball problem are actually likely to survive in larger models?
+\end{itemize}
+
+\end{document}
