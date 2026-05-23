@@ -192,7 +192,9 @@ def train_dqn(
     reward_clip=None,
     seed=0,
     device="cpu",
+    verbose_every=250,
 ):
+
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -322,7 +324,6 @@ def train_dqn(
 
     return q_net, diagnostics
 
-
 # ============================================================
 # Main tiny grid
 # ============================================================
@@ -346,16 +347,16 @@ if __name__ == "__main__":
         "angle_maxs": [ np.pi / 4,  np.pi / 2],
     }
 
-    # tiny grid
+    # tiny grid: vary lr, episodes, and seed
     lrs = [1e-3, 5e-4, 2e-4]
-    eps_decays = [0.9995, 0.9997]
-    seeds = [1, 2, 3, 4, 5]
+    episode_list = [5000, 10000]
+    seeds = [0, 1, 2, 3, 4]
 
     # fixed training settings
-    episodes = 5000
     gamma = 0.99
     epsilon_start = 1.0
     epsilon_end = 0.05
+    epsilon_decay = 0.9995
     batch_size = 64
     replay_capacity = 50000
     min_replay_size = 500
@@ -367,9 +368,9 @@ if __name__ == "__main__":
     rows = []
 
     for lr in lrs:
-        for eps_decay in eps_decays:
+        for episodes in episode_list:
             for seed in seeds:
-                run_name = f"dqn_lr{lr:.0e}_decay{eps_decay:.4f}_seed{seed}"
+                run_name = f"dqn_lr{lr:.0e}_ep{episodes}_seed{seed}"
                 print("\n" + "=" * 72)
                 print("Running", run_name)
 
@@ -382,7 +383,7 @@ if __name__ == "__main__":
                     lr=lr,
                     epsilon_start=epsilon_start,
                     epsilon_end=epsilon_end,
-                    epsilon_decay=eps_decay,
+                    epsilon_decay=epsilon_decay,
                     batch_size=batch_size,
                     replay_capacity=replay_capacity,
                     min_replay_size=min_replay_size,
@@ -402,11 +403,9 @@ if __name__ == "__main__":
                     best = cycles[0]
                     best_len = best["length"]
                     best_avg = best["avg_reward"]
-                    best_cycle = best["cycle"]
                 else:
                     best_len = np.nan
                     best_avg = np.nan
-                    best_cycle = []
 
                 model_path = os.path.join(modeldir, run_name + ".pt")
                 result_path = os.path.join(resultdir, run_name + ".npy")
@@ -424,7 +423,7 @@ if __name__ == "__main__":
                         "lr": lr,
                         "epsilon_start": epsilon_start,
                         "epsilon_end": epsilon_end,
-                        "epsilon_decay": eps_decay,
+                        "epsilon_decay": epsilon_decay,
                         "batch_size": batch_size,
                         "replay_capacity": replay_capacity,
                         "min_replay_size": min_replay_size,
@@ -441,8 +440,8 @@ if __name__ == "__main__":
                         "run_name": run_name,
                         "seed": seed,
                         "lr": lr,
-                        "epsilon_decay": eps_decay,
                         "episodes": episodes,
+                        "epsilon_decay": epsilon_decay,
                         "best_cycle_length": best_len,
                         "best_avg_reward": best_avg,
                         "model_path": model_path,
@@ -462,8 +461,8 @@ if __name__ == "__main__":
                 "run_name",
                 "seed",
                 "lr",
-                "epsilon_decay",
                 "episodes",
+                "epsilon_decay",
                 "best_cycle_length",
                 "best_avg_reward",
                 "model_path",

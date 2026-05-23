@@ -59,14 +59,14 @@ The corresponding stroke in $(\phi_1,\phi_2)$-space is shown in Figure~\ref{fig:
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=0.58\textwidth]{figures/VI_cycle.png}
+    \includegraphics[width=0.58\textwidth]{../figures/VI_cycle.png}
     \caption{Phase-space plot of the length-$24$ cycle found by value iteration for the fixed discrete environment with $\gamma=0.99$.}
     \label{fig:vi_cycle_phase}
 \end{figure}
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=0.62\textwidth]{figures/VI_reward.png}
+    \includegraphics[width=0.62\textwidth]{../figures/VI_reward.png}
     \caption{Per-step rewards around the value-iteration cycle. Although some portions of the cycle have negative instantaneous reward, the full cycle has positive average reward.}
     \label{fig:vi_cycle_rewards}
 \end{figure}
@@ -102,28 +102,28 @@ Figure~\ref{fig:Vstar_heatmap} shows a heatmap of the optimal value function $V^
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=0.92\textwidth]{figures/all_methods_phase_plane_tiled.png}
+    \includegraphics[width=0.92\textwidth]{../figures/all_methods_phase_plane_tiled.png}
     \caption{Tiled phase-plane comparison of the recurrent cycles found by VI, tabular Q-learning, DQN, and PPO. VI, tabular Q-learning, and PPO recover the same length-$24$ cycle up to cyclic phase shift, while DQN converges reproducibly to a nearby but distinct length-$25$ cycle.}
     \label{fig:all_methods_phase}
 \end{figure}
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=0.72\textwidth]{figures/all_methods_reward_traces.png}
+    \includegraphics[width=0.72\textwidth]{../figures/all_methods_reward_traces.png}
     \caption{Per-step reward traces along the recurrent cycles found by VI, tabular Q-learning, DQN, and PPO. The VI, tabular-Q, and PPO traces agree up to cyclic phase shift, while the DQN trace differs slightly, consistent with its distinct length-$25$ cycle.}
     \label{fig:all_methods_rewards}
 \end{figure}
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=0.92\textwidth]{figures/all_methods_stroke_overlays_tiled.png}
+    \includegraphics[width=0.92\textwidth]{../figures/all_methods_stroke_overlays_tiled.png}
     \caption{Tiled stroke overlays in physical space for the cycles found by VI, tabular Q-learning, DQN, and PPO. The DQN stroke remains geometrically close to the VI/tabular/PPO stroke, but it is not identical.}
     \label{fig:all_methods_strokes}
 \end{figure}
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=0.65\textwidth]{figures/Vstar_heatmap.png}
+    \includegraphics[width=0.65\textwidth]{../figures/Vstar_heatmap.png}
     \caption{Heatmap of the optimal value function $V^*$ on the discrete $(\phi_1,\phi_2)$ grid. The smooth gradient structure shows how the optimal policy organizes the state space toward the high-value recurrent stroke.}
     \label{fig:Vstar_heatmap}
 \end{figure}
@@ -148,38 +148,46 @@ Overall, this sweep suggests that the choice of discount factor is not a minor n
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=\textwidth]{figures/gamma_sweep_phase_plane_tiled.png}
+    \includegraphics[width=\textwidth]{../figures/gamma_sweep_phase_plane_tiled.png}
     \caption{Optimal recurrent cycles in the phase plane for the value-iteration policy at each discount factor \(\gamma\). As \(\gamma\) increases, the optimal cycle becomes longer and moves through a coherent family of larger recurrent orbits.}
     \label{fig:gamma_sweep_phase}
 \end{figure}
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=0.9\textwidth]{figures/gamma_sweep_selected_strokes_tiled.png}
+    \includegraphics[width=0.9\textwidth]{../figures/gamma_sweep_selected_strokes_tiled.png}
     \caption{Stroke plots in physical space for selected discount factors. These plots show how the phase-plane changes translate into changes in the geometry of the underlying cilia motion.}
     \label{fig:gamma_sweep_strokes}
 \end{figure}
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=0.7\textwidth]{figures/gamma_sweep_cycle_length_vs_gamma.png}
+    \includegraphics[width=0.7\textwidth]{../figures/gamma_sweep_cycle_length_vs_gamma.png}
     \caption{Length of the optimal recurrent cycle as a function of the discount factor \(\gamma\). The optimal cycle length grows substantially as \(\gamma\) increases.}
     \label{fig:gamma_sweep_length}
 \end{figure}
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=0.7\textwidth]{figures/gamma_sweep_avg_reward_vs_gamma.png}
+    \includegraphics[width=0.7\textwidth]{../figures/gamma_sweep_avg_reward_vs_gamma.png}
     \caption{Average reward per cycle as a function of the discount factor \(\gamma\). Larger \(\gamma\) leads to higher-performing recurrent cycles in this environment.}
     \label{fig:gamma_sweep_avgreward}
 \end{figure}
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=0.9\textwidth]{figures/gamma_sweep_reward_traces.png}
+    \includegraphics[width=0.9\textwidth]{../figures/gamma_sweep_reward_traces.png}
     \caption{Reward traces along the optimal recurrent cycles for each discount factor \(\gamma\). Higher-\(\gamma\) cycles exhibit a different balance of positive and negative rewards, reflecting the greater importance of long-horizon performance in the discounted objective.}
     \label{fig:gamma_sweep_rewards}
 \end{figure}
+
+\section{Phase II direction: beyond the exact benchmark}
+
+The Phase I discrete benchmark provides a useful exact reference problem, but it is not the final scientific target of the project. Its main role is to validate the environment, compare methods in a controlled setting, and identify families of good recurrent strokes. The next phase should therefore shift emphasis away from exact agreement with the discounted value-iteration solution and toward understanding how reinforcement-learning methods behave when the exact benchmark is no longer the main objective.
+
+A natural first step is to continue using the small two-ball cilia problem as a controlled method-development testbed, but now with a different emphasis. In particular, Phase II will include systematic exploration of DQN and PPO on this problem, with attention to the recurrent cycles they discover, the effect of training length and hyperparameters, and the distinction between discounted-optimal cycles and cycles with larger average reward per stroke. This keeps the problem simple enough to interpret while allowing the project to begin focusing on the more relevant long-term question: how to use RL to discover good beating strokes in settings where value iteration and tabular methods are no longer available.
+
+From there, the next expansion would be to move toward larger and more flexible models, such as three- or four-ball cilia, or eventually continuous/low-mode descriptions of cilia shape. In that regime, exact dynamic programming will disappear, and methods such as PPO and DQN will need to be judged directly by the quality and robustness of the recurrent strokes they find.
 
 
 \end{document}
