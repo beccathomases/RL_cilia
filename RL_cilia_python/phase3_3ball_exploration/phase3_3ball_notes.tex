@@ -18,7 +18,7 @@ The goal of this phase is to move beyond the two-ball benchmark and begin explor
 
 At the same time, I still want to begin in a regime where value iteration and tabular methods are at least somewhat feasible, so that I can watch where exact or tabular approaches start to break down before handing the problem over entirely to neural RL methods.
 
-\section{3-ball environment: first design choices}
+\section{3-ball environment definition}
 
 The current three-ball environment is intended as the simplest natural extension of the two-ball benchmark.
 
@@ -46,7 +46,7 @@ This preserves the same serial-link convention used in the two-ball code and kee
 
 The current working discretization is
 \[
-n_{\mathrm{bins}} = [9,17,17],
+n_{\mathrm{bins}} = [11,21,21],
 \]
 with angle ranges
 \[
@@ -60,7 +60,6 @@ This choice is meant to balance two goals:
     \item allow the internal joints enough freedom to produce genuinely richer motions.
 \end{itemize}
 
-The coarser alternative with $9\times 9\times 9$ states and all three angles in $[-\pi/2,\pi/2]$ turned out to be too crude and also made it easier for value iteration to exploit pathological short local cycles.
 
 \subsection*{Actions}
 
@@ -71,7 +70,7 @@ The action space is the natural extension of the two-ball setting: each relative
 
 \subsection*{Boundary handling and reward}
 
-At present I am still using the same general reward structure as in the earlier benchmark: a one-step flux-like quantity derived from the Stokes/image-system solve, together with the same general boundary-handling logic (`clip\_penalty' or `stay\_penalty'). This is useful for continuity with the earlier benchmark, even though one of the lessons of the current phase may be that this objective does not scale cleanly to richer geometries.
+At present I am still using the same general reward structure as in the earlier benchmark: a one-step flux-like quantity derived from the Stokes/image-system solve, together with the same general boundary-handling logic (`clip\_penalty' or `stay\_penalty'). This is useful for continuity with the earlier benchmark.
 
 \section{What turned out to matter immediately}
 
@@ -97,67 +96,103 @@ This change was not a minor cleanup. It qualitatively changed the value-iteratio
 
 At the moment, the most important lesson is that in the three-ball setting, physically meaningful stroke discovery seems to depend not only on the reward and discretization, but also on explicitly enforcing basic geometric admissibility. The two-ball benchmark may have been simple enough to hide this issue, while the three-ball geometry exposes it immediately.
 
-\section{Current value-iteration result}
+\section{Value iteration on the three-ball benchmark}
 
-With the current environment choices and the added wall-clearance condition, value iteration produces a length-$18$ recurrent cycle with average reward approximately
+Once the wall-clearance condition and the numerical safeguards were in place, value iteration began to produce physically meaningful recurrent motions rather than short pathological loops. On the coarser three-ball discretization,
 \[
-0.995.
+[11,21,21],
 \]
-
-This is already much more stroke-like than the earlier short degenerate solution. The angle traces show coordinated variation in all three relative angles, the pairwise phase projections show a genuine loop rather than a tiny toggle, and the physical overlay suggests a real recurrent beating pattern rather than a local exploit.
+the resulting VI cycle had length $23$ and already looked like a genuine coordinated stroke. This was an important first sign that the three-ball benchmark could behave coherently once physical admissibility was enforced.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.95\textwidth]{figures_vi_3ball/vi_3ball_cycle_angle_traces.png}
-    \caption{Repeated angle traces for the current three-ball VI cycle. This plot helps show whether the solution is a genuine coordinated recurrent motion or merely a short local toggle.}
+    \caption{Repeated angle traces for an early physically admissible three-ball VI cycle on the coarser grid. This plot shows coordinated variation in all three relative angles rather than a short local toggle.}
     \label{fig:vi3ball_angles}
 \end{figure}
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.95\textwidth]{figures_vi_3ball/vi_3ball_cycle_phase_projections.png}
-    \caption{Pairwise phase projections for the current three-ball VI cycle. These projections help visualize the geometry of the recurrent orbit in the three-angle state space.}
+    \caption{Pairwise phase projections for the corresponding three-ball VI cycle on the coarser grid. The orbit forms a genuine loop in angle space rather than collapsing to a small corner cycle.}
     \label{fig:vi3ball_phase}
 \end{figure}
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{figures_vi_3ball/vi_3ball_cycle_stroke_overlay.png}
-    \caption{Physical stroke overlay for the current three-ball VI cycle. This gives a first sense of the resulting recurrent motion in physical space.}
+    \caption{Physical stroke overlay for the corresponding three-ball VI cycle on the coarser grid. This provides a first physically meaningful recurrent motion in the three-ball environment.}
     \label{fig:vi3ball_stroke}
 \end{figure}
 
 
-Refining the three-ball discretization from $[9,17,17]$ to $[11,21,21]$ increased the VI cycle length from $18$ to $23$ while preserving the basic qualitative picture: the solution remained a coordinated recurrent stroke rather than collapsing to a short local exploit. This suggests that, once physical admissibility is enforced, the three-ball benchmark admits a meaningful stroke family whose discrete realization becomes more resolved on a finer grid.
+
+\section{Tabular Q-learning on the refined three-ball benchmark}
+
+I next tested tabular Q-learning on the refined three-ball environment with discretization
+\[
+[11,21,21],
+\]
+using the same relative-angle / cumulative-angle representation and the same physically admissible environment as in the refined VI runs. A practical lesson here was that the episode horizon matters: shorter episode lengths often led to shorter or less satisfactory learned cycles, while longer runs with sufficiently long episodes produced a much more coherent picture.
+
+These tabular-Q results are very close to the value-iteration benchmark on the same refined three-ball environment. On the $[11,21,21]$ grid, value iteration produced a length-$23$ recurrent cycle, whereas the tabular-Q runs across five seeds produced cycles of length $21$ to $23$. This is strong evidence that the learned tabular policies are not wandering among unrelated local solutions, but instead are converging to the same broad stroke family identified by value iteration, with only modest seed-dependent differences in the exact discrete orbit.
+
+Across the five seeds, the learned best cycles were all quite similar: the cycle lengths ranged from $21$ to $23$, and the average cycle rewards ranged from about $0.70$ to $0.76$. Thus, although the learned policies were not literally identical, they all appear to lie in the same broad recurrent-stroke family rather than in qualitatively different local optima.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\textwidth]{figures_tabq_3ball_seed_sweep/tabq_3ball_seed_angle_traces_tiled.png}
+    \caption{Repeated angle traces for the best tabular-Q cycle found at each seed. The learned cycles have similar lengths and show the same broad coordinated variation in the three relative angles, with only modest seed-to-seed differences.}
+    \label{fig:tabq3ball_angles}
+\end{figure}
+
+The repeated angle traces in Figure~\ref{fig:tabq3ball_angles} are especially encouraging. All seeds exhibit the same overall temporal organization: a coordinated excursion through the three-angle state space, with similar amplitude ranges and phase offsets among $\phi_1$, $\phi_2$, and $\phi_3$. The seed-to-seed variation appears to be mostly in small timing details and in the exact discrete realization of the loop, not in the underlying stroke mechanism.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\textwidth]{figures_tabq_3ball_seed_sweep/tabq_3ball_seed_phase_tiled.png}
+    \caption{Pairwise phase projections for the best tabular-Q cycle at each seed. These projections suggest that all five runs belong to the same broad recurrent-stroke family in angle space.}
+    \label{fig:tabq3ball_phase}
+\end{figure}
+
+This same conclusion is reinforced by the pairwise phase projections in Figure~\ref{fig:tabq3ball_phase}. Although the loops are not identical, the geometry of the recurrent orbit is very consistent across seeds. In particular, seeds $0$, $2$, and $4$ are extremely close, while seeds $1$ and $3$ still appear to be nearby variants within the same family rather than different solutions.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\textwidth]{figures_tabq_3ball_seed_sweep/tabq_3ball_seed_strokes_tiled.png}
+    \caption{Physical stroke overlays for the best tabular-Q cycle at each seed. The recovered motions are all physically similar and suggest a common recurrent beating pattern.}
+    \label{fig:tabq3ball_strokes}
+\end{figure}
+
+The physical stroke overlays in Figure~\ref{fig:tabq3ball_strokes} make the same point in physical space. Once the wall-clearance condition is enforced, tabular Q-learning does not collapse to tiny pathological loops. Instead, it repeatedly finds a coordinated extended motion whose physical shape varies only modestly across seeds.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\textwidth]{figures_tabq_3ball_seed_sweep/tabq_3ball_seed_reward_traces_tiled.png}
+    \caption{Flux reward traces along the best tabular-Q cycle for each seed. Each learned cycle shows a similar pattern: a concentrated positive-reward part of the stroke followed by a longer negative-return portion.}
+    \label{fig:tabq3ball_reward_traces}
+\end{figure}
+
+The cycle-by-cycle reward traces in Figure~\ref{fig:tabq3ball_reward_traces} are also strikingly consistent. Each seed exhibits a similar qualitative pattern: a relatively concentrated positive-reward segment followed by a more extended negative-return segment, with the overall cycle remaining net positive. This again suggests that the algorithm is finding a common stroke structure rather than unrelated recurrent loops.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\textwidth]{figures_tabq_3ball_seed_sweep/tabq_3ball_seed_reward_traces_repeated_tiled.png}
+    \caption{Repeated flux reward traces for the best tabular-Q cycles, extended to a common horizon. This representation makes the periodic structure and cross-seed consistency especially easy to compare by eye.}
+    \label{fig:tabq3ball_reward_traces_repeated}
+\end{figure}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\textwidth]{figures_tabq_3ball_seed_sweep/tabq_3ball_seed_best_cycle_history_tiled.png}
+    \caption{Evolution of the best detected greedy-policy cycle during tabular Q-learning across seeds. The cycle length and average reward stabilize fairly quickly and then remain in a narrow range.}
+    \label{fig:tabq3ball_history}
+\end{figure}
+
+Finally, the history plot in Figure~\ref{fig:tabq3ball_history} shows that the tabular-Q runs stabilize rather cleanly. The best detected cycle length settles into the low-$20$s, and the best average reward also levels off into a narrow band. Thus, while the training dynamics are not perfectly identical across seeds, there is little evidence here of severe instability or qualitatively different late-time behavior.
+
+Taken together, these results show that on the refined physically admissible three-ball benchmark, tabular Q-learning robustly recovers the same broad recurrent-stroke family as value iteration. Even though the problem is richer than the original two-ball benchmark, exact and tabular methods still appear to remain coherent at this scale.
 
 
-
-\section{What still needs interpretation}
-
-Although the current value-iteration cycle is much more plausible than the earlier degenerate one, several questions remain open.
-
-\begin{itemize}
-    \item Is this length-$18$ cycle the unique dominant VI stroke, or only the first one found under the present discretization?
-    \item How sensitive is it to discretization choices such as $[9,17,17]$ versus coarser or finer grids?
-    \item Does tabular Q-learning recover the same cycle or a nearby family of cycles?
-    \item Is the current one-step flux objective still scientifically reasonable in the three-ball geometry, or is it already starting to reward motions that are too local or too benchmark-specific?
-    \item How much of the current behavior depends on the specific admissibility rule $z_i>a$?
-\end{itemize}
-
-\section{Immediate next steps}
-
-The current natural next steps are:
-
-\begin{itemize}
-    \item run tabular Q-learning on the current three-ball benchmark and compare against VI,
-    \item inspect whether the VI cycle is recovered up to cyclic phase shift,
-    \item begin watching where VI and tabular methods start to become cumbersome,
-    \item decide whether the next comparison should be DQN/PPO on this same benchmark,
-    \item think more carefully about whether the present one-step reward should be replaced by something more stroke-based or efficiency-based in richer geometries.
-\end{itemize}
-
-\section{Provisional summary}
-
-So far, the three-ball exploration already suggests something important: once the cilium geometry is made even modestly richer, physical admissibility constraints become much more central. In particular, enforcing wall clearance was essential to obtaining a value-iteration solution that looks like a real stroke rather than a short pathological loop. This makes the three-ball model qualitatively different from the earlier benchmark, and likely a much better testbed for what should come next.
 
 \end{document}

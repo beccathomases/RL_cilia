@@ -1,0 +1,6 @@
+seed,cycle_length,avg_reward,file
+0,23,0.7641848237933523,tabular_q_cilia_3_ball_clip_penalty_bins11x21x21_ep10000_steps1500_g0.990_eps0.75_a0.99_seed0.npy
+4,23,0.754529677210201,tabular_q_cilia_3_ball_clip_penalty_bins11x21x21_ep10000_steps1500_g0.990_eps0.75_a0.99_seed4.npy
+1,22,0.7464477325617307,tabular_q_cilia_3_ball_clip_penalty_bins11x21x21_ep10000_steps1500_g0.990_eps0.75_a0.99_seed1.npy
+2,23,0.7299923026598205,tabular_q_cilia_3_ball_clip_penalty_bins11x21x21_ep10000_steps1500_g0.990_eps0.75_a0.99_seed2.npy
+3,21,0.7038718016308891,tabular_q_cilia_3_ball_clip_penalty_bins11x21x21_ep10000_steps1500_g0.990_eps0.75_a0.99_seed3.npy

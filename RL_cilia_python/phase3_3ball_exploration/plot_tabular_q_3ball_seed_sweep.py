@@ -92,10 +92,6 @@ for seed in SEEDS:
 
     phis = np.array([env.state_to_angles(np.array(s, dtype=float)) for s in cycle_states])
 
-    episode_rewards = np.array(data.get("episode_rewards", []), dtype=float)
-    episode_lengths = np.array(data.get("episode_lengths", []), dtype=float)
-    best_cycle_history = np.array(data.get("best_cycle_history", []), dtype=object)
-
     runs.append({
         "seed": seed,
         "file": path,
@@ -108,9 +104,6 @@ for seed in SEEDS:
         "phi1": phis[:, 0],
         "phi2": phis[:, 1],
         "phi3": phis[:, 2],
-        "episode_rewards": episode_rewards,
-        "episode_lengths": episode_lengths,
-        "best_cycle_history": best_cycle_history,
     })
 
     summary_rows.append({
@@ -237,70 +230,73 @@ fig.savefig(phase_file, dpi=200, bbox_inches="tight")
 
 
 # ------------------------------------------------------------
-# Figure 4: tiled episode reward traces
+# Figure 4: tiled flux reward traces along cycle
 # ------------------------------------------------------------
-fig, axes = plt.subplots(3, 2, figsize=(12, 12), sharex=True, sharey=False)
+fig, axes = plt.subplots(3, 2, figsize=(12, 12), sharex=False, sharey=True)
 axes = axes.ravel()
 
 for ax, run in zip(axes, runs):
-    rewards = run["episode_rewards"]
-    if rewards.size > 0:
-        ep = np.arange(1, len(rewards) + 1)
-        ax.plot(ep, rewards, linewidth=1.2)
-    ax.set_title(f"seed={run['seed']}", fontsize=10)
-    ax.set_xlabel("episode")
-    ax.set_ylabel("episode reward")
+    rewards = np.array(run["rewards"], dtype=float)
+    t_reward = np.arange(1, len(rewards) + 1)
+
+    ax.plot(t_reward, rewards, "o-", linewidth=2, markersize=4)
+    ax.axhline(0.0, linewidth=1)
+
+    ax.set_title(
+        f"seed={run['seed']}\nlen={run['length']}, avg={run['avg_reward']:.6f}",
+        fontsize=10
+    )
+    ax.set_xlabel("step in cycle")
+    ax.set_ylabel("flux reward")
     ax.grid(True)
 
 for ax in axes[len(runs):]:
     ax.axis("off")
 
-fig.suptitle("Tabular Q, 3-ball: episode reward by seed", fontsize=15)
+fig.suptitle("Tabular Q, 3-ball: flux reward traces along best cycle by seed", fontsize=15)
 fig.tight_layout(rect=[0, 0, 1, 0.95])
 
-ep_reward_file = os.path.join(OUTDIR, "tabq_3ball_seed_episode_rewards_tiled.png")
-fig.savefig(ep_reward_file, dpi=200, bbox_inches="tight")
+reward_trace_file = os.path.join(OUTDIR, "tabq_3ball_seed_reward_traces_tiled.png")
+fig.savefig(reward_trace_file, dpi=200, bbox_inches="tight")
 
 
 # ------------------------------------------------------------
-# Figure 5: tiled best-cycle-history traces
+# Figure 5: tiled repeated flux reward traces
 # ------------------------------------------------------------
-fig, axes = plt.subplots(3, 2, figsize=(12, 12), sharex=True, sharey=False)
+fig, axes = plt.subplots(3, 2, figsize=(12, 12), sharex=True, sharey=True)
 axes = axes.ravel()
+t = np.arange(TMAX + 1)
 
 for ax, run in zip(axes, runs):
-    hist = run["best_cycle_history"]
-    if hist.size > 0:
-        hist = np.array(hist.tolist(), dtype=float)
-        ep = hist[:, 0]
-        best_len = hist[:, 1]
-        best_avg = hist[:, 2]
+    rewards = np.array(run["rewards"], dtype=float)
+    rewards_rep = repeat_to_length(rewards, TMAX + 1)
 
-        ax.plot(ep, best_avg, linewidth=2, label="best cycle avg reward")
-        ax2 = ax.twinx()
-        ax2.plot(ep, best_len, "--", linewidth=1.5, label="best cycle length")
+    ax.plot(t, rewards_rep, "-", linewidth=2)
+    ax.axhline(0.0, linewidth=1)
 
-        ax.set_ylabel("best avg reward")
-        ax2.set_ylabel("best cycle length")
-    ax.set_title(f"seed={run['seed']}", fontsize=10)
-    ax.set_xlabel("episode")
+    ax.set_title(
+        f"seed={run['seed']}\nlen={run['length']}, avg={run['avg_reward']:.6f}",
+        fontsize=10
+    )
+    ax.set_xlabel("t")
+    ax.set_ylabel("flux reward")
     ax.grid(True)
 
 for ax in axes[len(runs):]:
     ax.axis("off")
 
-fig.suptitle("Tabular Q, 3-ball: best-cycle history by seed", fontsize=15)
+fig.suptitle(r"Tabular Q, 3-ball: repeated flux reward traces to $t=60$", fontsize=15)
 fig.tight_layout(rect=[0, 0, 1, 0.95])
 
-best_hist_file = os.path.join(OUTDIR, "tabq_3ball_seed_best_cycle_history_tiled.png")
-fig.savefig(best_hist_file, dpi=200, bbox_inches="tight")
+reward_repeat_file = os.path.join(OUTDIR, "tabq_3ball_seed_reward_traces_repeated_tiled.png")
+fig.savefig(reward_repeat_file, dpi=200, bbox_inches="tight")
 
 
 print("\nSaved figures:")
 print(" ", angles_file)
 print(" ", stroke_file)
 print(" ", phase_file)
-print(" ", ep_reward_file)
-print(" ", best_hist_file)
+print(" ", reward_trace_file)
+print(" ", reward_repeat_file)
 
 plt.show()
