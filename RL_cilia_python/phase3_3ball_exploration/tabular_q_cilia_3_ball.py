@@ -17,7 +17,7 @@ epsilon_floor = 0.05
 
 n_episodes = 10000
 max_steps = 1500
-seed = 3
+seed = 4
 
 verbose_every = 100
 

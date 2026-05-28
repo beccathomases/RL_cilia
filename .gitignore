@@ -14,6 +14,12 @@
 # MATLAB output/data files — add exceptions below if some .mat files are source data
 *.mat
 
+# Python / RL saved arrays and model weights
+*.npy
+*.npz
+*.pt
+*.pth
+
 # Figures and generated images
 *.fig
 *.png
@@ -22,8 +28,6 @@
 *.tif
 *.tiff
 *.svg
-*.dvi
-
 
 # Videos / animations
 *.mp4
@@ -37,10 +41,31 @@
 *.out
 *.err
 
-# Python/cache stuff, if any
+# Python/cache stuff
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
+
+# LaTeX build products
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.dvi
+*.fdb_latexmk
+*.fls
+*.lof
+*.lot
+*.nav
+*.out
+*.run.xml
+*.snm
+*.synctex.gz
+*.toc
+*.vrb
+
+# Keep note PDFs, but ignore other build products
+# (PDFs are NOT ignored on purpose)
 
 # Common generated-output folders
 results/
