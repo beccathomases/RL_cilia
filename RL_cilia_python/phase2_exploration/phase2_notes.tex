@@ -1,7 +1,8 @@
 \documentclass{article}
-\usepackage{graphicx}
+
 \usepackage{amsmath,amssymb}
 \usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
 
 \title{Phase II Notes: RL Exploration on and Beyond the 2-Ball Benchmark}
 
@@ -9,7 +10,7 @@
 
 \maketitle
 
-\section{Very short Phase I summary}
+\section{Phase I summary}
 
 Phase I locked down the small discrete two-ball Python benchmark in a reproducible form. In that benchmark, value iteration gives a length-$24$ discounted-optimal cycle for $\gamma=0.99$, and tabular Q-learning and PPO recover the same cycle up to cyclic phase shift. DQN, after fixing the reproducibility issue, converges reproducibly but not to the same orbit: it finds a nearby length-$25$ alternative.
 
@@ -42,26 +43,6 @@ Use the same small two-ball problem for a while longer, but shift the emphasis:
     \item use this as preparation for larger problems where VI/table methods are gone.
 \end{itemize}
 
-\section{Current DQN direction}
-
-The first Phase II thread is DQN exploration on the two-ball problem.
-
-Things I want to understand:
-\begin{itemize}
-    \item what families of cycles DQN finds,
-    \item how this depends on learning rate, training length, and seed,
-    \item whether longer training pushes DQN toward the VI cycle or toward longer/higher-average cycles,
-    \item how to interpret cycles that have higher average reward per period than the VI cycle,
-    \item whether DQN is really learning ``better strokes'' in the average-reward sense, even if they are not VI-optimal.
-\end{itemize}
-
-
-\subsection*{DQN tiny-grid results}
-
-I ran a small reproducible DQN grid on the two-ball benchmark, varying learning rate, training length, and seed. The goal here was not only to ask whether DQN reproduces the discounted VI cycle, but also to see what kinds of recurrent cycles it discovers when trained longer and under slightly different settings.
-
-The overall picture is variable rather than sharply monotone. There is no single hyperparameter setting that cleanly dominates all the others. Instead, the runs produce a family of nearby recurrent cycles with lengths ranging from roughly $22$ to $27$, together with a corresponding spread in average rewards. This suggests that DQN is exploring a structured local landscape of recurrent strokes rather than converging to one unique solution.
-
 \begin{table}[t]
 \centering
 \begin{tabular}{cccccc}
@@ -79,12 +60,30 @@ Rank & Learning rate & Episodes & Seed & Cycle length & Avg.\ reward \\
 \label{tab:dqn_tiny_grid_top_runs}
 \end{table}
 
+\section{DQN exploration on the two-ball benchmark}
+
+The first Phase II thread was DQN exploration on the two-ball problem.
+
+Things I wanted to understand:
+\begin{itemize}
+    \item what families of cycles DQN finds,
+    \item how this depends on learning rate, training length, and seed,
+    \item whether longer training pushes DQN toward the VI cycle or toward longer/higher-average cycles,
+    \item how to interpret cycles that have higher average reward per period than the VI cycle,
+    \item whether DQN is really learning ``better strokes'' in the average-reward sense, even if they are not VI-optimal.
+\end{itemize}
+
+\subsection*{DQN tiny-grid results}
+
+I ran a small reproducible DQN grid on the two-ball benchmark, varying learning rate, training length, and seed. The goal here was not only to ask whether DQN reproduces the discounted VI cycle, but also to see what kinds of recurrent cycles it discovers when trained longer and under slightly different settings.
+
+The overall picture is variable rather than sharply monotone. There is no single hyperparameter setting that cleanly dominates all the others. Instead, the runs produce a family of nearby recurrent cycles with lengths ranging from roughly $22$ to $27$, together with a corresponding spread in average rewards. This suggests that DQN is exploring a structured local landscape of recurrent strokes rather than converging to one unique solution.
 
 The exact VI cycle still appears in some DQN runs, showing that DQN can in fact reach the discounted-optimal benchmark cycle on this small problem. However, several of the strongest runs in the sweep produce nearby longer cycles with larger average reward per cycle than the VI benchmark. Table~\ref{tab:dqn_tiny_grid_top_runs} lists the top runs ranked by average reward.
 
 Among the tested settings, the $5\times 10^{-4}$, $10000$-episode group gave the strongest overall performance in the average-reward sense: it had both the largest group mean average reward and the best single run in the sweep. More broadly, increasing the training length from $5000$ to $10000$ episodes often improved the average reward, especially for learning rates $5\times 10^{-4}$ and $10^{-3}$.
 
-Overall, the main lesson of this sweep is not that one hyperparameter choice solves the problem cleanly, but rather that DQN on the two-ball benchmark appears to navigate a multi-solution landscape. Some runs recover the exact VI cycle, while others converge to nearby longer cycles with larger average reward per period. This makes the tiny-grid study useful not only as a tuning exercise, but also as evidence that the discounted VI benchmark and the average-reward stroke viewpoint can pull in different directions.'
+Overall, the main lesson of this sweep is not that one hyperparameter choice solves the problem cleanly, but rather that DQN on the two-ball benchmark appears to navigate a structured local landscape of nearby recurrent cycles. Some runs recover the exact VI cycle, while others converge to nearby longer cycles with larger average reward per period. This makes the tiny-grid study useful not only as a tuning exercise, but also as evidence that the discounted VI benchmark and the average-reward stroke viewpoint can pull in different directions.
 
 The top DQN runs do not appear to represent qualitatively different stroke families. Instead, the phase-plane plots, stroke reconstructions, and reward traces suggest that DQN is repeatedly finding nearby variants of a common recurrent-motion pattern. The main differences seem to lie in small geometric adjustments, cycle length, and the placement of extra steps along the orbit, rather than in a completely different stroke mechanism. This supports the view that the two-ball benchmark contains a structured local family of strong strokes, and that the DQN hyperparameter sweep is largely exploring different discrete realizations within that family.
 
@@ -109,9 +108,13 @@ The top DQN runs do not appear to represent qualitatively different stroke famil
     \label{fig:dqn_top3_rewards}
 \end{figure}
 
-\section{Current PPO direction}
+A natural next check was whether the apparent benefit of longer DQN training persists beyond $10000$ episodes. Since the strongest setting in the tiny grid was learning rate $5\times 10^{-4}$, a focused follow-up was to hold that learning rate fixed and test a small number of seeds at longer training horizons, namely $15000$ and $20000$ episodes.
 
-The second Phase II thread is PPO exploration on the same two-ball problem.
+A small follow-up at learning rate $5\times 10^{-4}$ with longer training horizons ($15000$ and $20000$ episodes, for three seeds) did not substantially change the qualitative picture. The learned cycles remained in the same local family, and the average rewards stayed in roughly the same range as in the $10000$-episode runs. While a few longer runs were competitive with the best earlier results, there was no clear monotone improvement beyond $10000$ episodes. This suggests that, for the present DQN setup on the two-ball benchmark, performance has largely plateaued by around $10000$ episodes.
+
+\section{PPO exploration on the two-ball benchmark}
+
+The second Phase II thread was PPO exploration on the same two-ball problem.
 
 PPO matters because it feels closer to the kind of method I might still want once the problem is too large for VI or tabular methods.
 
@@ -123,15 +126,59 @@ Questions:
     \item how does PPO compare to DQN as a way to search for good recurrent strokes?
 \end{itemize}
 
-\subsection*{Placeholder for PPO results}
+\subsection*{PPO seed-sweep results}
 
-Put PPO seed sweep / training-length exploration here.
+A small PPO sweep over seeds and training length gave a cleaner picture than the analogous DQN sweep. At $300000$ timesteps, PPO recovered the VI-level benchmark cycle for $4$ of $5$ seeds, with the remaining seed converging to a nearby length-$23$ cycle of slightly lower average reward. At $1000000$ timesteps, PPO still recovered the VI-level cycle for some seeds, but two runs moved to a nearby length-$25$ cycle with larger average reward per period.
+
+Thus, PPO appears fairly robust on the two-ball benchmark, and more tightly clustered than DQN, but it is not restricted to the discounted VI solution. With longer training, PPO can also shift into the same general family of nearby longer cycles with higher average reward that appeared in the DQN experiments. This again supports the distinction between the discounted benchmark viewpoint and the cycle-quality viewpoint: PPO often agrees with the exact benchmark, but not always, and longer training can favor nearby recurrent strokes that look stronger in the average-reward sense.
+
+To better understand the PPO seed-sweep outcomes, I compared three representative runs: a VI-like length-$24$ cycle, the nearby length-$23$ lower-reward alternative, and the strongest length-$25$ higher-average-reward cycle. The resulting phase-plane plots, stroke reconstructions, and reward traces help clarify whether PPO is discovering qualitatively different motions or nearby variants within the same local stroke family.
+
+The representative PPO runs do show some geometric differences, especially in the length-$25$ case, which introduces a small additional bend in the lower part of the phase-plane loop. However, the overall phase-plane geometry, stroke reconstructions, and reward traces suggest that these PPO solutions still belong to the same general stroke family rather than representing qualitatively different mechanisms. Thus, as in the DQN experiments, PPO appears to be exploring nearby variants of a common recurrent motion.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\textwidth]{ppo_seed_sweep_runs/figures/ppo_representative_phase_plane.png}
+    \caption{Representative PPO cycles from the seed sweep: a VI-like length-$24$ cycle, the length-$23$ alternative, and the strongest length-$25$ higher-average-reward cycle.}
+    \label{fig:ppo_representative_phase}
+\end{figure}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\textwidth]{ppo_seed_sweep_runs/figures/ppo_representative_strokes.png}
+    \caption{Physical stroke reconstructions for the representative PPO runs. These plots help show whether the PPO alternatives are qualitatively different stroke mechanisms or nearby variants of the same family.}
+    \label{fig:ppo_representative_strokes}
+\end{figure}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.8\textwidth]{ppo_seed_sweep_runs/figures/ppo_representative_reward_traces.png}
+    \caption{Reward traces along the representative PPO cycles. Comparing these traces helps clarify how the longer PPO cycle redistributes positive and negative rewards over a full stroke.}
+    \label{fig:ppo_representative_rewards}
+\end{figure}
+
+This interpretation is strengthened by a tiled phase-plane comparison of all DQN runs from the tiny reproducible sweep. Although the DQN results vary in cycle length and average reward, the phase-plane plots suggest that the learned recurrent cycles all belong to the same broad stroke family. The visible differences are mainly small local modifications---for example, slight changes in the lower part of the orbit or in how the cycle closes---rather than qualitatively different stroke mechanisms. In other words, within the present two-ball benchmark and its current angle ranges, the RL methods appear to be exploring a fairly narrow local family of strong strokes rather than multiple genuinely distinct stroke types.
+
+This helps close the loop on the current benchmark problem. For the present benchmark, the main variation across DQN and PPO runs appears to be variation within a common stroke family rather than between fundamentally different mechanisms. That is useful in itself, since it suggests that if one wants to see qualitatively different learned strokes, the next place to look is likely in enlarged-angle or otherwise expanded environments rather than in additional optimization of the present setup.
+
+The angle bounds may be doing more than simply restricting the state space quantitatively. They may be helping determine which stroke families are geometrically accessible at all, and therefore shaping both the optimization landscape and the variety of learned recurrent motions.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\textwidth]{dqn_tiny_grid_runs/figures/dqn_all_runs_phase_tiled.png}
+    \caption{Tiled phase-plane plots for all best cycles found in the DQN tiny reproducible sweep. Despite variation in cycle length and average reward, the learned cycles all appear to lie in the same broad stroke family, with differences mainly in small local detours and how the orbit closes.}
+    \label{fig:dqn_all_phase_tiled}
+\end{figure}
+
+\section{Phase II conclusion}
+
+At this point, the present Phase II exploration of the two-ball benchmark feels reasonably complete. Both DQN and PPO can find nearby high-performing recurrent cycles, and both methods show some tension between the discounted VI benchmark and the average-reward viewpoint. However, within the current benchmark and its present angle ranges, the learned solutions remain confined to a fairly narrow common stroke family. The main variation is therefore variation within that family, not the discovery of fundamentally different stroke mechanisms.
+
+This is a useful conclusion in itself. It suggests that further progress is more likely to come from changing the problem---for example by enlarging the angle range, modifying the objective, or moving to a larger model---than from continued optimization of the present two-ball benchmark. In particular, the angle bounds may be structurally important, since they appear to affect not only the difficulty of the RL optimization but also which stroke families are geometrically accessible at all.
 
 \section{Discounted benchmark versus stroke objective}
 
-A key conceptual point for Phase II:
-
-The discounted VI problem is still useful, but I do not think it is the final scientific objective. It is a benchmark and a way to find and organize solutions. What I am really after is something more like:
+A key conceptual point for Phase II is that the discounted VI problem is still useful, but I do not think it is the final scientific objective. It is a benchmark and a way to find and organize solutions. What I am really after is something more like:
 \begin{itemize}
     \item average reward per stroke,
     \item stroke efficiency,
@@ -159,28 +206,28 @@ This makes it a good place to:
     \item identify what should scale and what probably will not.
 \end{itemize}
 
-\section{What comes after this}
+\section{What comes next}
 
-After enough DQN/PPO exploration on the two-ball problem, the next step should be to move to a larger or more flexible model.
+The natural next step is to move to a larger or more flexible model, or to modify the current benchmark in a way that broadens the accessible stroke space.
 
 Possible directions:
 \begin{itemize}
+    \item enlarged angle ranges,
     \item 3-ball or 4-ball discrete cilium,
     \item richer reward structures,
     \item alternative boundary handling,
     \item eventually continuous or low-mode cilia descriptions.
 \end{itemize}
 
-The point of the Phase II two-ball work is to help decide how to make that jump intelligently.
+The point of the Phase II two-ball work has been to clarify which aspects of the current benchmark are robust, which are constrained by the geometry, and where a more informative next problem may lie.
 
-\section{Immediate working to-do list}
+\section{Immediate next steps}
 
 \begin{itemize}
-    \item finish reproducible DQN tiny-grid rerun,
-    \item summarize what DQN is doing at different learning rates and episode counts,
-    \item start a small PPO seed sweep,
-    \item think more clearly about how to score a full recurrent stroke,
-    \item decide what the first post-benchmark larger model should be.
+    \item Decide how to compare near-best cycles by stroke mechanism rather than only by reward and length.
+    \item Think more clearly about how to score a full recurrent stroke.
+    \item Explore enlarged-angle or otherwise expanded environments to test for qualitatively different stroke families.
+    \item Decide what the first post-benchmark larger model should be.
 \end{itemize}
 
 \section{Open questions}
@@ -188,7 +235,7 @@ The point of the Phase II two-ball work is to help decide how to make that jump 
 \begin{itemize}
     \item What is the right notion of ``best stroke'' for the real project?
     \item Is average reward per cycle enough, or do I want something more physical?
-    \item When DQN finds higher-average cycles than VI, what is the cleanest way to interpret that?
+    \item When DQN or PPO finds higher-average cycles than VI, what is the cleanest way to interpret that?
     \item Does PPO behave more robustly than DQN on this problem?
     \item What lessons from the two-ball problem are actually likely to survive in larger models?
 \end{itemize}

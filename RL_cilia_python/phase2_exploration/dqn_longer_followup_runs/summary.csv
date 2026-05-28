@@ -1,0 +1,7 @@
+run_name,seed,lr,episodes,epsilon_decay,best_cycle_length,best_avg_reward,model_path,result_path
+dqn_lr5e-04_ep15000_seed1,1,0.0005,15000,0.9995,26,0.3833264768476532,dqn_longer_followup_runs/models/dqn_lr5e-04_ep15000_seed1.pt,dqn_longer_followup_runs/results/dqn_lr5e-04_ep15000_seed1.npy
+dqn_lr5e-04_ep15000_seed2,2,0.0005,15000,0.9995,24,0.38269188608784804,dqn_longer_followup_runs/models/dqn_lr5e-04_ep15000_seed2.pt,dqn_longer_followup_runs/results/dqn_lr5e-04_ep15000_seed2.npy
+dqn_lr5e-04_ep15000_seed3,3,0.0005,15000,0.9995,25,0.380452093328277,dqn_longer_followup_runs/models/dqn_lr5e-04_ep15000_seed3.pt,dqn_longer_followup_runs/results/dqn_lr5e-04_ep15000_seed3.npy
+dqn_lr5e-04_ep20000_seed1,1,0.0005,20000,0.9995,24,0.3763941823558153,dqn_longer_followup_runs/models/dqn_lr5e-04_ep20000_seed1.pt,dqn_longer_followup_runs/results/dqn_lr5e-04_ep20000_seed1.npy
+dqn_lr5e-04_ep20000_seed2,2,0.0005,20000,0.9995,25,0.3704057180367492,dqn_longer_followup_runs/models/dqn_lr5e-04_ep20000_seed2.pt,dqn_longer_followup_runs/results/dqn_lr5e-04_ep20000_seed2.npy
+dqn_lr5e-04_ep20000_seed3,3,0.0005,20000,0.9995,26,0.38263191126631474,dqn_longer_followup_runs/models/dqn_lr5e-04_ep20000_seed3.pt,dqn_longer_followup_runs/results/dqn_lr5e-04_ep20000_seed3.npy
