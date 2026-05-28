@@ -1,0 +1,163 @@
+\documentclass{article}
+
+\usepackage{amsmath,amssymb}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{float}
+
+\title{Phase III Notes: 3-Ball Cilia Exploration}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Goal of this phase}
+
+The goal of this phase is to move beyond the two-ball benchmark and begin exploring a richer cilium model with three segments / three balls / three relative angles. The main motivation is that the two-ball benchmark, while very useful, seemed to support only a fairly narrow family of strong strokes. Adding one more joint should broaden the accessible stroke space and give a better test of which conclusions from the benchmark survive in a more expressive geometry.
+
+At the same time, I still want to begin in a regime where value iteration and tabular methods are at least somewhat feasible, so that I can watch where exact or tabular approaches start to break down before handing the problem over entirely to neural RL methods.
+
+\section{3-ball environment: first design choices}
+
+The current three-ball environment is intended as the simplest natural extension of the two-ball benchmark.
+
+\subsection*{Geometry and state representation}
+
+The cilium is modeled as three equal-length segments with fixed total length:
+\[
+L_1=L_2=L_3=\frac13.
+\]
+
+As in the two-ball case, the environment stores \emph{relative} angles,
+\[
+\phi = (\phi_1,\phi_2,\phi_3),
+\]
+where $\phi_1$ is the base angle and the physical segment angles are reconstructed cumulatively:
+\[
+\psi_1=\phi_1,\qquad
+\psi_2=\phi_1+\phi_2,\qquad
+\psi_3=\phi_1+\phi_2+\phi_3.
+\]
+
+This preserves the same serial-link convention used in the two-ball code and keeps the interpretation of the coordinates consistent across phases.
+
+\subsection*{Angle ranges and discretization}
+
+The current working discretization is
+\[
+n_{\mathrm{bins}} = [9,17,17],
+\]
+with angle ranges
+\[
+\phi_1 \in \left[-\frac{\pi}{4},\frac{\pi}{4}\right],\qquad
+\phi_2,\phi_3 \in \left[-\frac{\pi}{2},\frac{\pi}{2}\right].
+\]
+
+This choice is meant to balance two goals:
+\begin{itemize}
+    \item keep the base-angle range comparable to the two-ball benchmark,
+    \item allow the internal joints enough freedom to produce genuinely richer motions.
+\end{itemize}
+
+The coarser alternative with $9\times 9\times 9$ states and all three angles in $[-\pi/2,\pi/2]$ turned out to be too crude and also made it easier for value iteration to exploit pathological short local cycles.
+
+\subsection*{Actions}
+
+The action space is the natural extension of the two-ball setting: each relative angle can increment by $-1$, $0$, or $1$ bin per step, excluding the all-zero action. Thus the total number of actions is
+\[
+3^3-1=26.
+\]
+
+\subsection*{Boundary handling and reward}
+
+At present I am still using the same general reward structure as in the earlier benchmark: a one-step flux-like quantity derived from the Stokes/image-system solve, together with the same general boundary-handling logic (`clip\_penalty' or `stay\_penalty'). This is useful for continuity with the earlier benchmark, even though one of the lessons of the current phase may be that this objective does not scale cleanly to richer geometries.
+
+\section{What turned out to matter immediately}
+
+Several ingredients turned out to be essential very quickly.
+
+\subsection*{Numerical safeguards}
+
+In the first three-ball experiments, the raw reward table contained astronomically large outliers coming from near-singular hydrodynamic solves. Adding simple numerical safeguards---for example rejecting near-contact configurations and very large finite force/flux values---was necessary before value iteration became interpretable.
+
+\subsection*{Physical wall admissibility}
+
+Even after the numerical blow-up was controlled, value iteration initially found a short local cycle that dipped below the wall. This made it clear that angle-box constraints alone are not enough once the geometry is richer: the environment also needs a physical admissibility condition.
+
+A simple and effective fix was to require that all ball centers remain at least one radius above the wall:
+\[
+z_i > a
+\]
+for each ball center, where $a$ is the ball radius.
+
+This change was not a minor cleanup. It qualitatively changed the value-iteration solution: the short degenerate cycle disappeared and was replaced by a much longer, more coordinated recurrent motion.
+
+\subsection*{Main current lesson}
+
+At the moment, the most important lesson is that in the three-ball setting, physically meaningful stroke discovery seems to depend not only on the reward and discretization, but also on explicitly enforcing basic geometric admissibility. The two-ball benchmark may have been simple enough to hide this issue, while the three-ball geometry exposes it immediately.
+
+\section{Current value-iteration result}
+
+With the current environment choices and the added wall-clearance condition, value iteration produces a length-$18$ recurrent cycle with average reward approximately
+\[
+0.995.
+\]
+
+This is already much more stroke-like than the earlier short degenerate solution. The angle traces show coordinated variation in all three relative angles, the pairwise phase projections show a genuine loop rather than a tiny toggle, and the physical overlay suggests a real recurrent beating pattern rather than a local exploit.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{figures_vi_3ball/vi_3ball_cycle_angle_traces.png}
+    \caption{Repeated angle traces for the current three-ball VI cycle. This plot helps show whether the solution is a genuine coordinated recurrent motion or merely a short local toggle.}
+    \label{fig:vi3ball_angles}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{figures_vi_3ball/vi_3ball_cycle_phase_projections.png}
+    \caption{Pairwise phase projections for the current three-ball VI cycle. These projections help visualize the geometry of the recurrent orbit in the three-angle state space.}
+    \label{fig:vi3ball_phase}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures_vi_3ball/vi_3ball_cycle_stroke_overlay.png}
+    \caption{Physical stroke overlay for the current three-ball VI cycle. This gives a first sense of the resulting recurrent motion in physical space.}
+    \label{fig:vi3ball_stroke}
+\end{figure}
+
+
+Refining the three-ball discretization from $[9,17,17]$ to $[11,21,21]$ increased the VI cycle length from $18$ to $23$ while preserving the basic qualitative picture: the solution remained a coordinated recurrent stroke rather than collapsing to a short local exploit. This suggests that, once physical admissibility is enforced, the three-ball benchmark admits a meaningful stroke family whose discrete realization becomes more resolved on a finer grid.
+
+
+
+\section{What still needs interpretation}
+
+Although the current value-iteration cycle is much more plausible than the earlier degenerate one, several questions remain open.
+
+\begin{itemize}
+    \item Is this length-$18$ cycle the unique dominant VI stroke, or only the first one found under the present discretization?
+    \item How sensitive is it to discretization choices such as $[9,17,17]$ versus coarser or finer grids?
+    \item Does tabular Q-learning recover the same cycle or a nearby family of cycles?
+    \item Is the current one-step flux objective still scientifically reasonable in the three-ball geometry, or is it already starting to reward motions that are too local or too benchmark-specific?
+    \item How much of the current behavior depends on the specific admissibility rule $z_i>a$?
+\end{itemize}
+
+\section{Immediate next steps}
+
+The current natural next steps are:
+
+\begin{itemize}
+    \item run tabular Q-learning on the current three-ball benchmark and compare against VI,
+    \item inspect whether the VI cycle is recovered up to cyclic phase shift,
+    \item begin watching where VI and tabular methods start to become cumbersome,
+    \item decide whether the next comparison should be DQN/PPO on this same benchmark,
+    \item think more carefully about whether the present one-step reward should be replaced by something more stroke-based or efficiency-based in richer geometries.
+\end{itemize}
+
+\section{Provisional summary}
+
+So far, the three-ball exploration already suggests something important: once the cilium geometry is made even modestly richer, physical admissibility constraints become much more central. In particular, enforcing wall clearance was essential to obtaining a value-iteration solution that looks like a real stroke rather than a short pathological loop. This makes the three-ball model qualitatively different from the earlier benchmark, and likely a much better testbed for what should come next.
+
+\end{document}

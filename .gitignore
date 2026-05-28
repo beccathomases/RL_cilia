@@ -22,7 +22,8 @@
 *.tif
 *.tiff
 *.svg
-*.pdf
+*.dvi
+
 
 # Videos / animations
 *.mp4
