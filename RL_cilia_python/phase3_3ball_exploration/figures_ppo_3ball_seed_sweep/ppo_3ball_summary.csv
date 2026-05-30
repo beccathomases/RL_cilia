@@ -1,0 +1,7 @@
+steps,seed,cycle_length,avg_reward,file
+300000,0,22,0.7774415034488846,ppo_3ball_runs/results/ppo_3ball_steps300000_seed0.npy
+300000,1,22,0.7871258080945395,ppo_3ball_runs/results/ppo_3ball_steps300000_seed1.npy
+300000,2,22,0.7490105013052211,ppo_3ball_runs/results/ppo_3ball_steps300000_seed2.npy
+1000000,0,22,0.7805369324569035,ppo_3ball_runs/results/ppo_3ball_steps1000000_seed0.npy
+1000000,1,23,0.7729391802175748,ppo_3ball_runs/results/ppo_3ball_steps1000000_seed1.npy
+1000000,2,22,0.7482372315305963,ppo_3ball_runs/results/ppo_3ball_steps1000000_seed2.npy
