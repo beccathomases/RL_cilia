@@ -1,0 +1,68 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{longtable}
+\usepackage{adjustbox}
+
+\setlist[itemize]{leftmargin=*,topsep=2pt,itemsep=2pt}
+\setlist[enumerate]{leftmargin=*,topsep=2pt,itemsep=2pt}
+\newcommand{\dth}{\Delta\theta}
+\newcommand{\pithirty}{$\pi/30$}
+\newcommand{\pitwenty}{$\pi/20$}
+
+\title{Phase 7 notes: comparing with optimization}
+\author{}
+\date{Draft notes}
+
+\begin{document}
+\maketitle
+
+
+\section{Phase 7: Fourier stroke comparison}
+
+The goal of Phase 7 is to compare the discrete strokes discovered by PPO with
+smooth periodic strokes represented by a low-order temporal Fourier basis.  This
+phase is motivated by the Phase 6 result that factored-action PPO with scaled
+radius produces robust coherent strokes at \(N=12\), including the refined
+\(\Delta\theta=\pi/40\) sweep.  Rather than further increasing \(N\) or refining
+\(\Delta\theta\), we now ask whether the learned RL strokes are close to smooth
+flux-optimizing loops in the same shape variables.
+
+We write the relative joint angles as
+\[
+    \phi_j(\tau)
+    =
+    a_{j,0}
+    +
+    \sum_{k=1}^{K}
+    \left[
+        a_{j,k}\cos(2\pi k\tau)
+        +
+        b_{j,k}\sin(2\pi k\tau)
+    \right],
+    \qquad
+    \tau\in[0,1],
+\]
+for \(j=1,\ldots,N\).  The first step is diagnostic: fit this representation to
+the PPO strokes and determine how many temporal modes are needed to reproduce
+the observed tip paths, cumulative spatial angles, and reward traces.  The next
+step is direct optimization of the Fourier coefficients for total cycle flux,
+using the same geometry, hydrodynamic model, and wall/contact constraints as in
+the PPO environment.
+
+This comparison separates three questions: whether PPO has found a smooth
+low-dimensional stroke family, whether that family is close to a classical
+flux-optimal loop, and how the flux-optimal stroke differs from strokes selected
+by efficiency or work-penalized objectives.  Since the current PPO reward does
+not include an energetic cost, we expect PPO to be closer to a flux-optimizing
+stroke than to a true efficiency optimum.
+
+
+
+
+\end{document}
