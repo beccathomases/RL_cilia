@@ -1,0 +1,557 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{placeins}
+
+\hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}
+
+% ============================================================
+% Phase 4 notes: scaling PPO for the N-ball cilium model
+% ============================================================
+%   pdflatex phase4_nball_ppo_scaling_notes.tex
+% Figure paths point at the comparison plots; adjust to your tree.
+% ============================================================
+
+\title{Phase 5 Notes: Scaling PPO $N=5$}
+\author{Becca Thomases}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Purpose of Phase 5}
+
+Phase 5 begins the scale-up beyond the tabular/Howard regime. In Phase 4,
+Howard average-reward policy iteration gave an exact finite-MDP benchmark for
+$N=2,3,4$, and PPO was validated against that benchmark. The main conclusion
+was that PPO reliably recovered a large fraction of the Howard gain for
+$N=3,4$, while the benchmark-free diagnostics --- tip area, tip-path length,
+and reward per tip area --- gave interpretable checks on learned strokes.
+
+The natural next test is $N=5$. At this size, the full state--action table is no
+longer practical: with $\Delta\theta=\pi/20$ the grid has
+\[
+    11\cdot 21^4 = 2{,}139{,}291
+\]
+states and
+\[
+    3^5-1 = 242
+\]
+actions, or roughly $5.18\times 10^8$ state--action pairs. Thus there is no
+Howard ceiling to compare against. Instead, the Phase 5 question is whether the
+same PPO setup that was validated at $N=3,4$ continues to produce a coherent,
+positive-pumping stroke family when scaled to $N=5$.
+
+Importantly, the first $N=5$ runs do not introduce a new reward, a curvature
+feature, or a factored action representation. They use the same relative-angle
+state, the same monolithic discrete action set of nonzero moves in
+$\{-1,0,1\}^N$, the same wall/boundary safeguards, and the same reward
+convention as the validated Phase 4 runs. The only substantive change is the
+dimension of the chain and the corresponding increase in PPO training time.
+
+
+\section{PPO model size and scaling}
+
+The PPO model used in these runs is intentionally small. The raw environment
+state is the vector of angle-bin indices,
+\[
+    s = (i_1,\ldots,i_N),
+\]
+with observation space
+\[
+    \mathrm{MultiDiscrete}(n_1,\ldots,n_N).
+\]
+For $\Delta\theta=\pi/20$, the bin counts are
+\[
+    (n_1,\ldots,n_N) = (11,21,\ldots,21),
+\]
+and for $\Delta\theta=\pi/30$ they are
+\[
+    (n_1,\ldots,n_N) = (16,31,\ldots,31).
+\]
+Although the raw state has only $N$ integer coordinates, Stable Baselines
+preprocesses a \texttt{MultiDiscrete} observation by one-hot encoding each
+coordinate. Thus the neural-network input dimension is not the number of grid
+states,
+\[
+    n_1 n_2 \cdots n_N,
+\]
+but rather the sum of the bin counts,
+\[
+    n_{\rm input} = n_1+\cdots+n_N.
+\]
+For example, at $N=5$ and $\Delta\theta=\pi/20$, the raw observation space is
+\[
+    \mathrm{MultiDiscrete}(11,21,21,21,21),
+\]
+so the PPO network receives a one-hot input vector of length
+\[
+    11+4\cdot 21 = 95.
+\]
+
+The action space is still the monolithic discrete action set consisting of all
+nonzero moves in $\{-1,0,1\}^N$, so
+\[
+    n_{\rm actions}=3^N-1.
+\]
+The PPO policy uses the default two-hidden-layer MLP architecture with hidden
+width 64. Thus the policy and value networks have the form
+\[
+    n_{\rm input} \to 64 \to 64 \to n_{\rm actions},
+    \qquad
+    n_{\rm input} \to 64 \to 64 \to 1.
+\]
+For the successful $N=5$, $\Delta\theta=\pi/20$ run, this gives the architecture
+\[
+    95 \to 64 \to 64 \to 242
+\]
+for the policy head, together with a matching value network, for a total of
+36,403 trainable parameters.
+
+This highlights the scaling difference between tabular dynamic programming and
+PPO. The exact table size grows like
+\[
+    (n_1\cdots n_N)(3^N-1),
+\]
+whereas the neural-network input dimension grows only like
+\[
+    n_1+\cdots+n_N,
+\]
+with the main exponential growth in the PPO model coming from the monolithic
+action head $3^N-1$. The table below shows the resulting sizes for the
+discretizations used in Phases 4 and 5.
+
+\begin{center}
+\begin{tabular}{c c r r r r}
+\toprule
+$N$ & $\Delta\theta$ & states & actions & NN input & NN parameters \\
+\midrule
+2 & $\pi/20$ & 231 & 8 & 32 & 13,129 \\
+3 & $\pi/20$ & 4,851 & 26 & 53 & 16,987 \\
+4 & $\pi/20$ & 101,871 & 80 & 74 & 23,185 \\
+5 & $\pi/20$ & 2,139,291 & 242 & 95 & 36,403 \\
+\midrule
+2 & $\pi/30$ & 496 & 8 & 47 & 15,049 \\
+3 & $\pi/30$ & 15,376 & 26 & 78 & 20,187 \\
+4 & $\pi/30$ & 476,656 & 80 & 109 & 27,665 \\
+5 & $\pi/30$ & 14,776,336 & 242 & 140 & 42,163 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The contrast is especially sharp at $N=5$. For $\Delta\theta=\pi/20$, the grid
+contains 2,139,291 states and 242 actions, corresponding to more than
+$5\times 10^8$ state--action pairs. PPO, however, represents the policy with a
+36,403-parameter neural network. This does not solve the finite MDP exactly, but
+it can exploit the structure of the stroke family by learning from sampled
+trajectories rather than enumerating the full state--action graph.
+
+For the first $N=5$ sweep we also made two practical changes relative to the
+Phase~4 PPO sweeps. First, the training horizon was increased from $10^6$ to
+$2\times 10^6$ steps. Second, a small entropy bonus,
+\[
+    \texttt{ent\_coef}=0.01,
+\]
+was added to encourage exploration in the larger 242-action space. The
+environment, state representation, reward convention, monolithic action set,
+and PPO architecture otherwise match the validated $N=3,4$ setup.
+
+
+
+
+\section{First $N=5$ baseline: monolithic-action PPO}
+
+The first Phase~5 baseline uses $\Delta\theta=\pi/20$, the same monolithic
+action space of $3^5-1=242$ actions, and PPO trained for $2\times 10^6$ steps.
+This is intentionally a direct scale-up of the validated $N=3,4$ setup: no new
+state variables, curvature features, reward terms, or factored action
+representation are introduced. Shorter smoke tests at $10^5$--$3\times 10^5$
+steps collapsed to stuck or wrong-orientation cycles, so the main new cost at
+$N=5$ appears to be sample efficiency. At $2\times 10^6$ steps, however, all 10
+seeds produce positive, nondegenerate periodic strokes.
+
+Across the 10 seeds, the learned cycles have lengths $L=16$--$20$, mean rewards
+between $1.566$ and $1.734$, and tip-loop areas between $0.555$ and $0.779$.
+The reward-per-area diagnostic
+\[
+    \rho = \frac{\hbox{cycle reward}}{|\hbox{tip area}|}
+\]
+is consistently positive, ranging from $43.70$ to $48.57$, with no
+wrong-orientation failures. Thus the $N=5$ runs look like a direct continuation
+of the validated $N=3,4$ stroke family rather than a new or unstable regime.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.72\linewidth]{figures/ppo_sweeps_n5/N5_dtheta_pi20/seed_001/tip_path}
+\caption{Representative tip path for a successful $N=5$ PPO run
+($\Delta\theta=\pi/20$, seed 1, $2\times 10^6$ training steps). The learned
+stroke forms a large single loop with positive reward-per-area, consistent with
+the benchmark-free diagnostics developed in Phase~4.}
+\label{fig:n5-tip-path-seed1}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.8\linewidth]{figures/ppo_sweeps_n5/N5_dtheta_pi20/seed_001/joint_trajectories}
+\caption{Relative joint angles and cumulative segment angles for the same
+representative $N=5$ learned stroke, repeated over five cycles. The motion is
+coherent and periodic across all five joints, indicating that PPO has found a
+structured stroke rather than a stuck or noisy policy.}
+\label{fig:n5-joint-trajectories-seed1}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.72\linewidth]{figures/ppo_sweeps_n5/N5_dtheta_pi20/seed_001/cycle_reward}
+\caption{Per-step reward over one representative $N=5$ learned cycle. The
+reward trace has the same qualitative structure as the successful $N=3,4$
+strokes: a recovery phase with negative rewards followed by a strong positive
+pumping burst.}
+\label{fig:n5-cycle-reward-seed1}
+\end{figure}
+
+\input{results/ppo_sweeps_n5/phase5_n5_per_seed_table.tex}
+
+Table~\ref{tab:phase5-n5-per-seed} gives the per-seed diagnostics for the full
+$N=5$ sweep. The striking feature is not just that the best seed succeeds, but
+that every seed succeeds in essentially the same diagnostic regime. The cycle
+lengths remain tightly clustered, the tip areas are all large and positive, and
+$\rho$ remains positive for every seed. This gives a benchmark-free version of
+the Phase~4 validation story: even without a Howard ceiling at $N=5$, the same
+reward--geometry diagnostics identify a consistent, physically interpretable
+pumping family.
+
+
+\section{Seed-to-seed gait comparison}
+
+The per-seed diagnostics show that all 10 $N=5$ runs are positive and
+nondegenerate, but they do not by themselves show whether the seeds found the
+same gait. To check this, we compared the detected cycles directly. Each cycle
+was resampled to a common phase grid, circularly shifted to align the tip path
+with a reference seed, and then compared using the tip path, cumulative segment
+angles, and reward trace.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.72\linewidth]{figures/ppo_sweeps_n5/gait_comparison_pi20/aligned_tip_paths.png}
+\caption{
+Phase-aligned tip paths for the 10 $N=5$ PPO seeds at
+$\Delta\theta=\pi/20$. Each curve is one learned cycle after circular phase
+alignment. The paths lie on the same large loop, with modest seed-to-seed
+geometric variation. This supports the interpretation that the seeds have
+converged to one stroke family rather than unrelated positive-pumping cycles.
+}
+\label{fig:n5-aligned-tip-paths}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.9\linewidth]{figures/ppo_sweeps_n5/gait_comparison_pi20/aligned_cumulative_angles.png}
+\caption{
+Phase-aligned cumulative segment-angle waveforms for the 10 $N=5$ PPO seeds.
+The five panels show $\psi_1,\ldots,\psi_5$ over one normalized cycle. The
+waveforms have the same qualitative shape across seeds, with the largest
+variation appearing as modest amplitude and timing differences rather than a
+different stroke structure.
+}
+\label{fig:n5-aligned-cumulative-angles}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.75\linewidth]{figures/ppo_sweeps_n5/gait_comparison_pi20/aligned_reward_traces.png}
+\caption{
+Phase-aligned reward traces for the 10 $N=5$ PPO seeds. All seeds show the same
+power/recovery timing: a negative-reward recovery phase followed by a strong
+positive pumping burst. Pairwise reward correlations after phase alignment
+range from $0.94$ to $0.99$, with mean correlation $0.97$.
+}
+\label{fig:n5-aligned-reward-traces}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.48\linewidth]{figures/ppo_sweeps_n5/gait_comparison_pi20/pairwise_tip_rms.png}
+\hfill
+\includegraphics[width=0.48\linewidth]{figures/ppo_sweeps_n5/gait_comparison_pi20/pairwise_psi_rms_deg.png}
+\caption{
+Pairwise seed-to-seed distances after phase alignment. Left: RMS distance
+between aligned tip paths. Right: RMS difference in cumulative segment angles,
+measured in degrees. The matrices show modest variation within a single gait
+family, with no isolated seed forming a qualitatively different stroke.
+}
+\label{fig:n5-pairwise-gait-distances}
+\end{figure}
+
+Together these comparisons strengthen the benchmark-free interpretation of the
+$N=5$ sweep. The seeds agree not only in scalar diagnostics such as tip area,
+cycle reward, and reward-per-area, but also in the aligned geometry and timing
+of the learned cycle. Thus the full $N=5$ sweep appears to recover a single
+coherent stroke family with moderate seed-to-seed variation, rather than merely
+a collection of unrelated positive-reward policies.
+
+
+At the finer resolution $\Delta\theta=\pi/30$, the $N=5$ sweep again produced
+positive strokes in all 10 seeds, with no wrong-orientation failures. The
+results are summarized in Table~\ref{tab:n5-pi30-summary}. Eight seeds found
+single-pass cycles with lengths $L=26$--$31$, tip areas $0.566$--$0.751$, and
+reward-per-area values $\rho=43.64$--$46.96$. The remaining two seeds produced
+longer cycles with $L=56$ and $L=58$. These are not failures: their tip areas
+and path lengths are approximately doubled, while $\rho$ remains in the same
+range. We therefore classify them as commensurate doubled orbits, using the
+same diagnostic as in Phase~4. Thus the finer-grid $N=5$ sweep preserves the
+same forward-pumping family, with the main new feature being occasional
+doubling rather than wrong-orientation collapse.
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{lcccccc}
+\hline
+group & seeds & $L$ & mean reward & tip area & tip path & $\rho$ \\
+\hline
+single-pass & 8 & 26--31 & 0.949--1.064 & 0.566--0.751 & 3.33--4.28 & 43.64--46.96 \\
+doubled & 2 & 56--58 & 0.902--1.008 & 1.10--1.22 & 6.87--7.16 & 46.12--47.50 \\
+\hline
+\end{tabular}
+\caption{Summary of the $N=5$, $\Delta\theta=\pi/30$ PPO sweep with
+$2\times 10^6$ training steps per seed and $\texttt{ent\_coef}=0$.
+ All 10 seeds produce positive strokes with no
+wrong-orientation failures. Eight seeds find single-pass cycles, while two
+produce commensurate doubled cycles with approximately doubled tip area and path
+length but comparable reward-per-area $\rho$.
+}
+\label{tab:n5-pi30-summary}
+\end{table}
+
+
+\section{Post-hoc scaled efficiency diagnostics}
+
+The reward diagnostics used above measure whether a learned cycle produces positive pumping and a coherent tip loop, but they do not directly measure how much joint motion is required to produce that pumping. At this point in the scale-up, it is useful to add post-hoc efficiency diagnostics that are comparable across both angular resolution and chain length. These diagnostics do not change the PPO reward. They are computed after training from the detected periodic cycle.
+
+The primary effort measure is the phase-normalized squared angle effort,
+\begin{equation}
+E_\phi
+= L_{\rm cyc}
+\sum_{m=0}^{L_{\rm cyc}-1}
+\frac{1}{N}
+\sum_{j=1}^N
+\left(\Delta \phi_j^m\right)^2 .
+\end{equation}
+This quantity approximates
+\begin{equation}
+\int_0^1
+\frac{1}{N}
+\sum_{j=1}^N
+\left|\partial_\tau \phi_j(\tau)\right|^2
+\, d\tau ,
+\end{equation}
+and is therefore intended to be more comparable across different angular discretizations than the raw sum of squared angle increments. The factor $1/N$ also makes $E_\phi$ a per-joint average, so it is comparable across chain lengths by construction; the corresponding total angular effort is $N E_\phi$.
+
+A companion path-style effort uses the per-step root-mean-square angle increment,
+\begin{equation}
+P_\phi
+= \sum_{m=0}^{L_{\rm cyc}-1}
+\left(
+\frac{1}{N}
+\sum_{j=1}^N
+\left(\Delta \phi_j^m\right)^2
+\right)^{1/2} .
+\end{equation}
+Together with the total cycle reward $R$ and the absolute signed area $A$ enclosed by the tip path, this gives the efficiency ratios
+\begin{equation}
+\frac{R}{E_\phi},
+\qquad
+\frac{A}{E_\phi},
+\qquad
+\frac{R}{P_\phi}.
+\end{equation}
+We also report $A/(N E_\phi)$, the area per unit \emph{total} angular effort, which strips out the joint-count dependence built into the per-joint average.
+The earlier diagnostic
+\begin{equation}
+\rho = \frac{R}{A}
+\end{equation}
+is retained as the reward-per-tip-area measure.
+
+Several useful patterns appear in Table~\ref{tab:efficiency}. First, for single-pass in-family strokes the scaled diagnostics are much more stable across angular resolution than the raw mean reward. For example, the Howard $N=2$ runs have nearly identical values of $E_\phi$, $R/E_\phi$, and $A/E_\phi$ at $\Delta\theta=\pi/20$ and $\Delta\theta=\pi/30$, and the PPO runs show the same stability for $N=3,4,5$. The one systematic exception is the Howard $N=3$, $\Delta\theta=\pi/20$ row, which is a commensurate doubled orbit; as discussed next, $E_\phi$ is not invariant under doubling, so this entry sits well above its single-pass counterpart. Setting that case aside, the phase-normalized effort appears to measure a resolution-independent property of the cycle.
+
+
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{4.5pt}
+\begin{tabular}{llrrrrrrrr}
+\toprule
+Method & $\Delta\theta$ & $N$ & runs
+& median $\bar r$
+& median $\rho$
+& median $E_\phi$
+& median $R/E_\phi$
+& median $A/E_\phi$
+& median $A/(N E_\phi)$ \\
+\midrule
+Howard & $\pi/20$ & 2 & 1  & 0.399 & 32.11 & 12.34 & 0.808 & 0.0252 & 0.0126 \\
+Howard & $\pi/30$ & 2 & 1  & 0.266 & 31.79 & 12.50 & 0.808 & 0.0254 & 0.0127 \\
+Howard & $\pi/20$ & 3 & 1  & 0.801 & 36.14 & 51.32 & 0.750 & 0.0207 & 0.0069 \\
+Howard & $\pi/30$ & 3 & 1  & 0.539 & 35.85 & 12.28 & 1.537 & 0.0429 & 0.0143 \\
+Howard & $\pi/20$ & 4 & 1  & 1.240 & 40.54 & 10.10 & 2.577 & 0.0636 & 0.0159 \\
+Howard & $\pi/30$ & 4 & 1  & 0.831 & 38.81 & 11.04 & 2.486 & 0.0640 & 0.0160 \\
+\midrule
+PPO & $\pi/20$ & 2 & 8  & 0.362 & 31.19 & 10.51 & 0.780 & 0.0252 & 0.0126 \\
+PPO & $\pi/30$ & 2 & 9  & 0.221 & 30.66 & 8.22  & 0.791 & 0.0258 & 0.0129 \\
+PPO & $\pi/20$ & 3 & 10 & 0.753 & 36.21 & 10.02 & 1.578 & 0.0436 & 0.0145 \\
+PPO & $\pi/30$ & 3 & 10 & 0.480 & 36.60 & 9.58  & 1.549 & 0.0417 & 0.0139 \\
+PPO & $\pi/20$ & 4 & 10 & 1.170 & 43.04 & 8.54  & 2.683 & 0.0621 & 0.0155 \\
+PPO & $\pi/30$ & 4 & 10 & 0.748 & 42.38 & 7.85  & 2.603 & 0.0623 & 0.0156 \\
+PPO & $\pi/20$ & 5 & 10 & 1.667 & 44.82 & 7.95  & 3.880 & 0.0859 & 0.0172 \\
+PPO & $\pi/30$ & 5 & 10 & 1.003 & 46.09 & 7.82  & 3.752 & 0.0840 & 0.0168 \\
+\bottomrule
+\end{tabular}
+\caption{Post-hoc scaled efficiency diagnostics for Howard policy iteration and PPO. PPO rows report medians over positive in-family runs only. For $N=2$, this removes the few negative or wrong-orientation PPO seeds; for $N\geq 3$, all PPO seeds in these sweeps are included. Here $\bar r$ is the mean reward per step, $\rho=R/A$ is reward per absolute tip area, $E_\phi$ is the phase-normalized squared angle effort, and $A/(N E_\phi)$ is the area per unit total angular effort. All entries are per-column medians over the indicated runs, so $(R/E_\phi)/(A/E_\phi)$ reproduces the listed $\rho$ only approximately.}
+\label{tab:efficiency}
+\end{table}
+
+
+
+Second, the Howard $N=3$, $\Delta\theta=\pi/20$ cycle is best read as a doubling artifact rather than as a genuinely inefficient gait. Unlike $\rho$, the effort $E_\phi$ is not invariant under commensurate doubling: a doubled orbit both doubles the increment sum and doubles the $L_{\rm cyc}$ prefactor, so $E_\phi$ scales by roughly a factor of four. This is borne out by the table, where the doubled $\Delta\theta=\pi/20$ value $E_\phi\approx 51.3$ is close to four times the single-pass $\Delta\theta=\pi/30$ value $E_\phi\approx 12.3$. The doubled orbit also carries roughly twice the reward $R$ and twice the area $A$, so its $R/E_\phi$ and $A/E_\phi$ come out at about half the single-pass values, and $A/(N E_\phi)$ drops to $0.0069$, conspicuously below every other non-degenerate row. Once doubling is accounted for, the single-pass Howard $N=3$ cycle ($\Delta\theta=\pi/30$: $R/E_\phi=1.54$, $A/E_\phi=0.043$) is essentially identical to the PPO $N=3$ strokes at both resolutions. The efficiency diagnostic therefore does not separate the gain-optimal cycle from the learned strokes once both are single-pass; the apparent gap is geometric. A useful corollary is that the strong, roughly fourfold response of $E_\phi$ to doubling makes it a sharper flag for commensurate doubling than either $\rho$ (which is invariant) or the tip-path length (which only doubles).
+
+Third, the $N=4$ comparison is the cleanest single-pass case, and it is where the efficiency story is most trustworthy. Howard and PPO have similar values of $A/E_\phi$ at both angular resolutions, with PPO slightly higher in $R/E_\phi$. Thus PPO is not merely recovering positive reward; it is finding strokes in essentially the same reward--geometry--effort regime as the exact dynamic-programming benchmark.
+
+Finally, the trend across $N$ separates cleanly into a joint-count effect and a genuine efficiency effect, and it is worth stating both. The per-joint effort $E_\phi$ stays roughly constant, in the range $8$--$12$, for both Howard and PPO at every $N$, so $A/E_\phi$ rises steeply with $N$ (PPO $\Delta\theta=\pi/20$: $0.044$, $0.062$, $0.086$ at $N=3,4,5$). Because $E_\phi$ is a per-joint average, however, this rise mixes two things, and the identity $A/E_\phi = N\,[A/(N E_\phi)]$ makes the split explicit: from $N=3$ to $N=5$ the left side grows by a factor $1.97$, which factors as $1.67$ (the joint count, $5/3$) times $1.18$ (the area per unit total angular effort). Most of the apparent gain is therefore that a longer chain simply brings more joints to the stroke, each doing comparable work; the part that reflects more effective use of motion is the residual $A/(N E_\phi)$, which rises only about $20\%$ over the same range (and similarly at $\Delta\theta=\pi/30$). This residual is the part most naturally associated with additional
+shape-space flexibility. In other words, more joints provide more shape-space planes in which a cyclic stroke can enclose area, so each unit of total motion can pump slightly more. The $N=4$ Howard--PPO agreement holds in both $A/E_\phi$ and $A/(N E_\phi)$, where the level is set by the physics rather than the optimizer, and the $N=5$ PPO rows extend the pattern beyond the Howard regime at both resolutions; $R/E_\phi$ behaves analogously, rising mainly through the joint count.
+
+These diagnostics should remain post-hoc for now. They provide a way to compare strokes across $N$, angular resolution, PPO budget, and action representation without changing the optimization problem. A later efficiency-aware reward could be introduced as a separate branch, for example by penalizing $E_\phi$-like motion costs, but the present table suggests that the diagnostic itself is already useful for interpreting the existing monolithic-action PPO and Howard results.
+
+\section{Primitive-period detection and $k$-fold closure at $N=6$}
+
+The first $N=6$ monolithic-action PPO sweep shows that exact full-state closure is no longer always the most useful unit for describing a learned stroke. The deterministic rollout still eventually returns to an exactly repeated discrete state, giving a well-defined full closure length $L_{\rm full}$. However, for several seeds the detected cycle consists of multiple traversals of a shorter primitive pumping stroke. This is the same phenomenon previously described as a doubled orbit, but at $N=6$ it appears with higher multiplicity.
+
+To distinguish a primitive stroke from its full exact closure, we introduce a post-hoc multiplicity diagnostic. Let $A_{\rm full}$ and $P_{\rm full}$ denote the absolute tip-loop area and tip-path length over the full detected cycle. Using the apparent single-pass seeds as a reference, with reference quantities $L_0$, $A_0$, and $P_0$, define
+\begin{equation}
+k_L = \frac{L_{\rm full}}{L_0},
+\qquad
+k_A = \frac{A_{\rm full}}{A_0},
+\qquad
+k_P = \frac{P_{\rm full}}{P_0}.
+\end{equation}
+For a clean $k$-fold commensurate orbit, these three multiplicity estimates should agree:
+\begin{equation}
+k_L \approx k_A \approx k_P.
+\end{equation}
+In this case, the long exact cycle is best interpreted as $k$ traversals of one primitive stroke. The extensive quantities $L_{\rm full}$, $A_{\rm full}$, $P_{\rm full}$, and total cycle reward then scale with $k$, while intensive or ratio-based diagnostics, such as mean reward and
+\begin{equation}
+\rho = \frac{R_{\rm full}}{A_{\rm full}},
+\end{equation}
+remain approximately invariant. By contrast, if $k_P$ is large but $k_A$ is much smaller, the tip travels a long path without enclosing proportional new area. We classify such runs as modulated or degraded rather than as benign commensurate multi-pass orbits.
+
+For the $N=6$, $\Delta\theta=\pi/20$, $3\times 10^6$-step sweep, the primitive reference is set by the three shortest clean cycles, seeds 2, 4, and 8. These give
+\[
+L_0 \approx 24,
+\qquad
+A_0 \approx 0.662,
+\qquad
+P_0 \approx 3.973.
+\]
+Table~\ref{tab:n6-primitive-periods} summarizes the resulting classification.
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\begin{tabular}{rrrrrrrrl}
+\toprule
+seed & $L_{\rm full}$ & $L_{\rm prim}$ & $k$
+& mean reward & $\rho$ & $A_{\rm pass}$ & $P_{\rm pass}$ & class \\
+\midrule
+0 & 43  & 21.5 & 2.05 & 1.513 & 50.81 & 0.640 & 4.202 & commensurate-2x \\
+1 & 39  & 19.5 & 2.05 & 1.472 & 53.12 & 0.540 & 3.385 & commensurate-2x \\
+2 & 24  & 24.0 & 1.09 & 1.534 & 51.17 & 0.719 & 3.973 & single-pass \\
+3 & 46  & 23.0 & 2.00 & 1.437 & 52.26 & 0.633 & 3.820 & commensurate-2x \\
+4 & 21  & 21.0 & 1.05 & 1.635 & 51.85 & 0.662 & 3.895 & single-pass \\
+5 & 49  & 24.5 & 2.04 & 1.368 & 53.03 & 0.632 & 3.857 & commensurate-2x \\
+6 & 108 & 21.6 & 5.14 & 1.592 & 51.24 & 0.671 & 4.070 & commensurate-5x \\
+7 & 97  & 24.2 & 4.22 & 0.874 & 59.50 & 0.356 & 4.228 & modulated/degraded \\
+8 & 24  & 24.0 & 0.89 & 1.425 & 53.08 & 0.644 & 4.203 & single-pass \\
+9 & 44  & 22.0 & 2.00 & 1.584 & 45.19 & 0.771 & 3.930 & commensurate-2x \\
+\bottomrule
+\end{tabular}
+\caption{Primitive-period classification for the $N=6$, $\Delta\theta=\pi/20$, $3\times 10^6$-step PPO sweep. Here $L_{\rm full}$ is the exact full-state closure length, $L_{\rm prim}$ is the estimated primitive stroke period, and $k$ is the estimated pass multiplicity. The per-pass quantities $A_{\rm pass}$ and $P_{\rm pass}$ are the full-cycle tip area and path length divided by the estimated multiplicity.}
+\label{tab:n6-primitive-periods}
+\end{table}
+
+
+The main conclusion is that $N=6$ monolithic PPO still finds the forward-pumping family. Nine of the ten seeds are either single-pass or clean commensurate multi-pass orbits. Seeds 0, 1, 3, 5, and 9 are commensurate-2x closures: their full cycles are approximately doubled, and their area and path multiplicities agree. Seed 6 is a clean higher-multiplicity example. Although its exact closure length is $L_{\rm full}=108$, the primitive period is about $22$ steps, and the per-pass quantities $A_{\rm pass}\approx 0.67$ and $P_{\rm pass}\approx 4.07$ lie in the same range as the single-pass seeds. Its value of $\rho\approx 51.2$ is also in family. Thus seed 6 is not a failure; it is a benign commensurate-5x orbit.
+
+Seed 7 is different. Its exact closure length is long, $L_{\rm full}=97$, and the reward autocorrelation detects a primitive reward motif near the same scale as the other seeds. However, the full tip path is much longer than expected relative to the enclosed area. Equivalently, $k_P$ is large while $k_A$ is only about two. This produces a large path-per-area value and a much lower mean reward, $0.874$, compared with the other seeds. We therefore classify seed 7 as modulated or degraded rather than as a clean $k$-fold traversal.
+
+This analysis reframes the apparent proliferation of long cycles at $N=6$. The exact-state closure detector is not wrong, but at larger $N$ it often returns $k$ copies of a shorter primitive stroke. The scalar diagnostics $\rho$ and mean reward are already largely closure-invariant, while the extensive quantities $L$, tip area, tip path length, and total reward should be reported either over the full closure or per primitive pass. The useful new diagnostic is the agreement, or disagreement, between the multiplicity estimates $k_L$, $k_A$, and $k_P$. Agreement identifies benign commensurate multi-pass closures; disagreement identifies path-heavy or modulated strokes.
+
+The $N=5$ runs provide a useful control. At $N=5$, $\Delta\theta=\pi/20$, all ten seeds are classified as single-pass. At $N=5$, $\Delta\theta=\pi/30$, the detector recovers the earlier hand classification: eight seeds are single-pass and two seeds are commensurate-2x. Thus the $N=6$ result is not an artifact of the detector. Rather, $N=6$ is the first regime in which multiplicity becomes a prominent feature across seeds.
+
+The broader implication is that the $N=6$ monolithic stress test does not show failure of the monolithic action representation. Instead, it shows that the learned stroke family persists, while the bookkeeping of stroke closure becomes more subtle. The new methodological need is to report primitive-period and pass-normalized diagnostics alongside exact full-state closure length.
+
+
+
+\section{Current interpretation}
+
+The full $N=5$ sweeps support the Phase~4 scale-up hypothesis. At this size,
+exact tabular dynamic programming is no longer part of the practical workflow:
+for $\Delta\theta=\pi/20$, the $N=5$ table would contain roughly
+$2.14\times 10^6$ states, $242$ actions, and $5.18\times 10^8$ state--action
+pairs, about 64 times larger than the $N=4$ table. Thus $N=5$ is the first
+regime where PPO is not just a faster alternative to Howard PI, but the
+practical route for optimizing strokes in the current workflow.
+
+Within this regime, the same PPO framework can still find the coherent cilium
+stroke family, using the same environment, state representation, reward
+convention, and monolithic action set as in Phase~4. The main new cost appears
+to be sample budget. Short smoke tests at $10^5$--$3\times 10^5$ steps
+collapsed to stuck or wrong-orientation cycles, while $2\times 10^6$-step runs
+produced positive, nondegenerate strokes across the full seed sweep.
+
+The success also persists at the finer angular resolution
+$\Delta\theta=\pi/30$. All 10 seeds again produced positive strokes with no
+wrong-orientation failures. Most seeds found single-pass cycles, while two
+seeds produced commensurate doubled cycles. These doubled cycles were
+identified by the same diagnostic used in Phase~4: their tip area and tip path
+length were approximately doubled, while the reward-per-area diagnostic
+$\rho$ remained in the same range. Thus the finer-grid sweep did not introduce
+a new failure mode; rather, it reproduced the same forward-pumping family with
+occasional doubled orbits.
+
+The post-hoc efficiency diagnostics are consistent with this interpretation:
+the $N=5$ PPO strokes at both angular resolutions have comparable
+phase-normalized effort $E_\phi$ and comparable values of $A/E_\phi$ and
+$R/E_\phi$, extending the resolution-stable efficiency pattern observed at
+$N=3,4$.
+
+The small entropy bonus used in the main $N=5$, $\Delta\theta=\pi/20$
+sweep does not appear to be essential for success. The finer-grid
+$\Delta\theta=\pi/30$ sweep was run with the Phase~4 setting
+$\texttt{ent\_coef}=0$, and all ten seeds again produced in-family
+positive strokes with no wrong-orientation failures. The reward-per-area
+diagnostic remained in the same range as the successful coarse-grid runs,
+with $\rho \in [43.64,47.50]$. Since $\pi/30$ is the more sample-limited
+of the two grids, its success without an entropy bonus suggests that the
+transition from failed short runs to successful $2\times 10^6$-step runs
+is best interpreted primarily as a sample-efficiency effect rather than
+as a consequence of the entropy bonus.
+
+These results suggest that the monolithic action representation is not yet a
+hard barrier at $N=5$, although it may become inefficient for larger $N$. The
+next questions are whether a factored action representation can improve sample
+efficiency, whether the same diagnostics continue to organize the behavior for
+larger chains, and how far PPO can be pushed once exact dynamic programming is
+fully outside the practical regime.
+
+
+\bibliographystyle{plain}
+\bibliography{refs}
+
+\end{document}
